@@ -21,7 +21,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
-  // Lógica de verificação de conformidade jurídica (Status Apto)
+  // Lógica de verificação de conformidade (Status Apto)
   const getTenderStatus = (t: Tender) => {
     const hasBasicInfo = t.empresa && t.orgaoLicitante && t.numeroEdital && t.objeto;
     const hasFinancials = t.valorReferencia > 0;
@@ -39,7 +39,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
   const upcomingTenders = tenders.filter(t => new Date(t.dataAbertura) >= now);
   const needsDiligence = upcomingTenders.filter(t => !t.propostaEnviada);
   
-  // Definição dos Cards com as nomenclaturas atualizadas
+  // Cards de Métricas com as nomenclaturas solicitadas
   const stats = [
     { 
       label: 'Próximas Licitações', 
@@ -70,11 +70,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
       value: upcomingTenders.filter(t => getTenderStatus(t) === 'ok').length, 
       icon: CheckCircle2, 
       color: 'bg-emerald-600', 
-      sub: 'Habilitação Jurídica OK' 
+      sub: 'Participação confirmada' 
     },
   ];
 
-  // Lógica de Datas do Calendário
+  // Lógica do Calendário
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -90,12 +90,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
-      {/* Grid de Cards Superiores */}
+      {/* Grid de Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, idx) => (
           <div key={idx} className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm transition-all hover:shadow-md">
             <div className="flex items-center justify-between mb-4">
-              <div className={`${stat.color} p-3 rounded-2xl text-white shadow-lg shadow-current/20`}>
+              <div className={`${stat.color} p-3 rounded-2xl text-white shadow-lg`}>
                 <stat.icon className="w-6 h-6" />
               </div>
               <span className="text-3xl font-black text-slate-900">{stat.value}</span>
@@ -109,7 +109,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Calendário Operacional Completo */}
+        {/* Calendário */}
         <div className="lg:col-span-8 bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[700px]">
           <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
             <h3 className="font-black text-slate-900 flex items-center gap-2">
@@ -166,7 +166,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
           </div>
         </div>
 
-        {/* Agenda Operacional Lateral */}
+        {/* Agenda Operacional */}
         <div className="lg:col-span-4">
           <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm p-8 h-full">
             <h3 className="font-black text-slate-900 mb-6 flex items-center gap-2">
@@ -174,47 +174,42 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
               Agenda Operacional
             </h3>
             <div className="space-y-4 overflow-y-auto max-h-[600px] pr-2 scrollbar-thin">
-              {upcomingTenders.length === 0 ? (
-                <p className="text-center text-slate-400 text-sm py-10 font-bold italic">Sem tarefas agendadas.</p>
-              ) : (
-                upcomingTenders.map((t, idx) => {
-                  const status = getTenderStatus(t);
-                  return (
-                    <div key={idx} className="p-4 bg-slate-50 rounded-3xl border border-slate-100 hover:border-blue-200 transition-all group">
-                      <div className="flex gap-4 mb-3">
-                        <div className={`w-12 h-12 shrink-0 rounded-2xl flex flex-col items-center justify-center border border-slate-100 shadow-sm ${status === 'ok' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                          <span className="text-[9px] font-black text-slate-400 uppercase">{new Date(t.dataAbertura).toLocaleDateString('pt-BR', { month: 'short' })}</span>
-                          <span className="text-lg font-black text-slate-900">{new Date(t.dataAbertura).getDate()}</span>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-black text-slate-900 truncate">{t.numeroEdital}</p>
-                          <p className="text-[10px] font-bold text-slate-500 uppercase truncate">{t.empresa}</p>
-                        </div>
+              {upcomingTenders.map((t, idx) => {
+                const status = getTenderStatus(t);
+                return (
+                  <div key={idx} className="p-4 bg-slate-50 rounded-3xl border border-slate-100 hover:border-blue-200 transition-all group">
+                    <div className="flex gap-4 mb-3">
+                      <div className={`w-12 h-12 shrink-0 rounded-2xl flex flex-col items-center justify-center border border-slate-100 shadow-sm ${status === 'ok' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                        <span className="text-[9px] font-black text-slate-400 uppercase">{new Date(t.dataAbertura).toLocaleDateString('pt-BR', { month: 'short' })}</span>
+                        <span className="text-lg font-black text-slate-900">{new Date(t.dataAbertura).getDate()}</span>
                       </div>
-
-                      {/* Alerta de Atenção Restaurado */}
-                      {!t.propostaEnviada && (
-                        <div className="mb-3 p-3 bg-rose-600 rounded-2xl flex items-center gap-3 animate-pulse shadow-lg shadow-rose-100">
-                          <AlertTriangle className="w-5 h-5 text-white" />
-                          <div>
-                            <p className="text-[10px] font-black text-white uppercase leading-none">Diligência</p>
-                            <p className="text-[9px] font-bold text-rose-50 uppercase mt-1">Solicitar valores mínimos</p>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between pt-3 border-t border-slate-200">
-                        <span className="text-[9px] font-black text-blue-600 uppercase flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> {t.horarioSessao || '--:--'}
-                        </span>
-                        <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${status === 'ok' ? 'text-emerald-600 bg-emerald-100' : 'text-rose-600 bg-rose-100'}`}>
-                          {status === 'ok' ? 'Habilitado' : 'Pendente'}
-                        </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-slate-900 truncate">{t.numeroEdital}</p>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase truncate">{t.empresa}</p>
                       </div>
                     </div>
-                  );
-                })
-              )}
+
+                    {!t.propostaEnviada && (
+                      <div className="mb-3 p-3 bg-rose-600 rounded-2xl flex items-center gap-3 animate-pulse shadow-lg shadow-rose-100">
+                        <AlertTriangle className="w-5 h-5 text-white" />
+                        <div>
+                          <p className="text-[10px] font-black text-white uppercase leading-none">Diligência</p>
+                          <p className="text-[9px] font-bold text-rose-50 uppercase mt-1">Solicitar valores mínimos</p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+                      <span className="text-[9px] font-black text-blue-600 uppercase flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {t.horarioSessao || '--:--'}
+                      </span>
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${status === 'ok' ? 'text-emerald-600 bg-emerald-100' : 'text-rose-600 bg-rose-100'}`}>
+                        {status === 'ok' ? 'Apto' : 'Pendente'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
