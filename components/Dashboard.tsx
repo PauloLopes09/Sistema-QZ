@@ -54,14 +54,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
       sub: 'Pendente de Participação' 
     },
     { 
-      label: 'Impugnações e Esclarecimentos', // Nome moderno e direto
+      label: 'Impugnações e Esclarecimentos', 
       value: tenders.filter(t => {
         const dates = [t.prazoImpugnacao, t.prazoEsclarecimento].filter(Boolean);
         return dates.some(d => new Date(d!) >= now && new Date(d!) <= new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000));
       }).length, 
       icon: Gavel, 
       color: 'bg-amber-500', 
-      sub: 'Prazos de Intervenção' 
+      sub: 'Prazos para Esclarecimentos' // Alterado conforme solicitado
     },
     { 
       label: 'Apto para Participação', 
@@ -106,7 +106,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Calendário Mensal Restaurado */}
+        {/* Calendário Mensal */}
         <div className="lg:col-span-8 bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[700px]">
           <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
             <h3 className="font-black text-slate-900 flex items-center gap-2">
@@ -171,46 +171,42 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
               Agenda Operacional
             </h3>
             <div className="space-y-4">
-              {upcomingTenders.length === 0 ? (
-                <p className="text-center text-slate-400 text-sm py-10">Sem tarefas agendadas.</p>
-              ) : (
-                upcomingTenders.map((t, idx) => {
-                  const status = getTenderStatus(t);
-                  return (
-                    <div key={idx} className="p-4 bg-slate-50 rounded-3xl border border-slate-100 hover:border-blue-200 transition-all group">
-                      <div className="flex gap-4 mb-3">
-                        <div className={`w-12 h-12 shrink-0 rounded-2xl flex flex-col items-center justify-center border border-slate-100 shadow-sm ${status === 'ok' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                          <span className="text-[9px] font-black text-slate-400 uppercase">{new Date(t.dataAbertura).toLocaleDateString('pt-BR', { month: 'short' })}</span>
-                          <span className="text-lg font-black text-slate-900">{new Date(t.dataAbertura).getDate()}</span>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-black text-slate-900 truncate">{t.numeroEdital}</p>
-                          <p className="text-[10px] font-bold text-slate-500 uppercase truncate">{t.empresa}</p>
-                        </div>
+              {upcomingTenders.map((t, idx) => {
+                const status = getTenderStatus(t);
+                return (
+                  <div key={idx} className="p-4 bg-slate-50 rounded-3xl border border-slate-100 hover:border-blue-200 transition-all group">
+                    <div className="flex gap-4 mb-3">
+                      <div className={`w-12 h-12 shrink-0 rounded-2xl flex flex-col items-center justify-center border border-slate-100 shadow-sm ${status === 'ok' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                        <span className="text-[9px] font-black text-slate-400 uppercase">{new Date(t.dataAbertura).toLocaleDateString('pt-BR', { month: 'short' })}</span>
+                        <span className="text-lg font-black text-slate-900">{new Date(t.dataAbertura).getDate()}</span>
                       </div>
-
-                      {!t.propostaEnviada && (
-                        <div className="mb-3 p-3 bg-rose-600 rounded-2xl flex items-center gap-3 animate-pulse shadow-lg shadow-rose-100">
-                          <AlertTriangle className="w-5 h-5 text-white" />
-                          <div>
-                            <p className="text-[10px] font-black text-white uppercase leading-none">Diligência</p>
-                            <p className="text-[9px] font-bold text-rose-50 uppercase">Coletar Proposta</p>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between pt-3 border-t border-slate-200">
-                        <span className="text-[9px] font-black text-blue-600 uppercase flex items-center gap-1">
-                          <Clock className="w-3 h-3" /> {t.horarioSessao || '--:--'}
-                        </span>
-                        <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase ${status === 'ok' ? 'text-emerald-600 bg-emerald-100' : 'text-rose-600 bg-rose-100'}`}>
-                          {status === 'ok' ? 'Habilitado' : 'Pendente'}
-                        </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-slate-900 truncate">{t.numeroEdital}</p>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase truncate">{t.empresa}</p>
                       </div>
                     </div>
-                  );
-                })
-              )}
+
+                    {!t.propostaEnviada && (
+                      <div className="mb-3 p-3 bg-rose-600 rounded-2xl flex items-center gap-3 animate-pulse shadow-lg shadow-rose-100">
+                        <AlertTriangle className="w-5 h-5 text-white" />
+                        <div>
+                          <p className="text-[10px] font-black text-white uppercase leading-none">Diligência</p>
+                          <p className="text-[9px] font-bold text-rose-100 uppercase">Solicitar valores mínimos</p> {/* Alterado conforme solicitado */}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+                      <span className="text-[9px] font-black text-blue-600 uppercase flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {t.horarioSessao || '--:--'}
+                      </span>
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase ${status === 'ok' ? 'text-emerald-600 bg-emerald-100' : 'text-rose-600 bg-rose-100'}`}>
+                        {status === 'ok' ? 'Habilitado' : 'Pendente'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
