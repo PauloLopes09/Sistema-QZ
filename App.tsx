@@ -343,7 +343,7 @@ const App: React.FC = () => {
           {[
             { id: 'dashboard', icon: LayoutDashboard, label: 'Resumo Geral' },
             { id: 'cadastro-propostas', icon: FilePlus, label: 'Cadastro de Propostas' },
-            { id: 'acompanhamento-licitações', icon: ListTodo, label: 'Acompanhamento' },
+            { id: 'acompanhamento-licitacões', icon: ListTodo, label: 'Acompanhamento' },
           ].map((item) => (
             <button key={item.id} onClick={() => setActiveMenu(item.id)} className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl transition-all font-black text-[12px] uppercase tracking-wider ${activeMenu === item.id ? 'bg-violet-600 text-white shadow-xl shadow-violet-200' : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900'}`}>
               <item.icon className={`w-5 h-5 ${activeMenu === item.id ? 'text-white' : 'text-zinc-400'}`} />{item.label}
