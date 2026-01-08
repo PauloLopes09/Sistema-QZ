@@ -54,7 +54,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
     { label: 'Apto para Participação', value: upcomingTenders.filter(t => getTenderStatus(t) === 'ok').length, icon: CheckCircle2, color: 'bg-emerald-600', sub: 'Habilitação Jurídica OK' },
   ];
 
-  // Lógica Completa do Calendário Restaurada
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -90,7 +89,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Calendário Mensal Restaurado */}
+        {/* Calendário Mensal */}
         <div className="lg:col-span-8 bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[700px]">
           <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
             <h3 className="font-black text-slate-900 flex items-center gap-2">
@@ -111,12 +110,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
           </div>
 
           <div className="grid grid-cols-7 flex-1">
-            {/* Espaços vazios do início do mês */}
             {Array.from({ length: firstDayOfMonth }).map((_, i) => (
               <div key={`empty-${i}`} className="p-2 border-r border-b border-slate-50 bg-slate-50/10" />
             ))}
             
-            {/* Dias do Mês */}
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const day = i + 1;
               const { aberturas } = getEventsForDay(day);
@@ -132,6 +129,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
                       const status = getTenderStatus(t);
                       return (
                         <div key={idx} className={`p-1.5 rounded-lg border shadow-sm ${status === 'ok' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-rose-50 border-rose-100 text-rose-800'}`}>
+                          {/* MENSAGEM DE ATENÇÃO NO CALENDÁRIO */}
+                          {!t.propostaEnviada && (
+                            <div className="bg-rose-600 text-[7px] text-white font-black uppercase text-center py-0.5 rounded-sm mb-1 animate-pulse">
+                              DILIGÊNCIA
+                            </div>
+                          )}
                           <p className="text-[9px] font-black truncate">{t.numeroEdital}</p>
                           <p className="text-[7px] truncate opacity-70">{t.empresa}</p>
                         </div>
@@ -155,20 +158,43 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
               {upcomingTenders.length === 0 ? (
                 <p className="text-center text-slate-400 text-sm py-10">Sem tarefas futuras.</p>
               ) : (
-                upcomingTenders.map((t, idx) => (
-                  <div key={idx} className="p-4 bg-slate-50 rounded-3xl border border-slate-100">
-                    <div className="flex gap-4">
-                      <div className="w-12 h-12 bg-white rounded-2xl flex flex-col items-center justify-center border border-slate-100 shadow-sm">
-                        <span className="text-[9px] font-black text-slate-400 uppercase">{new Date(t.dataAbertura).toLocaleDateString('pt-BR', { month: 'short' })}</span>
-                        <span className="text-lg font-black text-slate-900">{new Date(t.dataAbertura).getDate()}</span>
+                upcomingTenders.map((t, idx) => {
+                  const status = getTenderStatus(t);
+                  return (
+                    <div key={idx} className="p-4 bg-slate-50 rounded-3xl border border-slate-100 hover:border-blue-200 transition-all group">
+                      <div className="flex gap-4 mb-3">
+                        <div className={`w-12 h-12 shrink-0 rounded-2xl flex flex-col items-center justify-center border border-slate-100 shadow-sm ${status === 'ok' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                          <span className="text-[9px] font-black text-slate-400 uppercase">{new Date(t.dataAbertura).toLocaleDateString('pt-BR', { month: 'short' })}</span>
+                          <span className="text-lg font-black text-slate-900">{new Date(t.dataAbertura).getDate()}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-black text-slate-900 truncate">{t.numeroEdital}</p>
+                          <p className="text-[10px] font-bold text-slate-500 uppercase truncate">{t.empresa}</p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-black text-slate-900 truncate">{t.numeroEdital}</p>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase truncate">{t.empresa}</p>
+
+                      {/* MENSAGEM DE ATENÇÃO NA AGENDA OPERACIONAL */}
+                      {!t.propostaEnviada && (
+                        <div className="mb-3 p-3 bg-rose-600 rounded-2xl flex items-center gap-3 animate-pulse shadow-lg shadow-rose-200">
+                          <AlertTriangle className="w-5 h-5 text-white" />
+                          <div>
+                            <p className="text-[10px] font-black text-white uppercase leading-none">Diligência Urgente</p>
+                            <p className="text-[9px] font-bold text-rose-100 uppercase">Coletar valores mínimos!</p>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+                        <span className="text-[9px] font-black text-blue-600 uppercase flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> {t.horarioSessao || '00:00'}
+                        </span>
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase ${status === 'ok' ? 'text-emerald-600 bg-emerald-100' : 'text-rose-600 bg-rose-100'}`}>
+                          {status === 'ok' ? 'Habilitado' : 'Pendente'}
+                        </span>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
