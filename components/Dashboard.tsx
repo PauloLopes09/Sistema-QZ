@@ -36,11 +36,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
   };
 
   const upcomingTenders = tenders.filter(t => new Date(t.dataAbertura) >= now);
-  const needsCharging = upcomingTenders.filter(t => !t.propostaEnviada);
+  const needsDiligence = upcomingTenders.filter(t => !t.propostaEnviada);
   
   const stats = [
     { label: 'Próximas Licitações', value: upcomingTenders.length, icon: CalendarIcon, color: 'bg-blue-600', sub: 'Aberturas futuras' },
-    { label: 'Pendente de valores mínimos', value: needsCharging.length, icon: DollarSign, color: 'bg-rose-600', sub: 'Diligência de Proposta' },
+    { label: 'Diligência de Proposta', value: needsDiligence.length, icon: DollarSign, color: 'bg-rose-600', sub: 'Pendente de Participação' },
     { 
       label: 'Prazos Legais', 
       value: tenders.filter(t => {
@@ -67,6 +67,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
+      {/* Cards de Métricas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, idx) => (
           <div key={idx} className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm">
@@ -83,6 +84,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Calendário Mensal */}
         <div className="lg:col-span-8 bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[700px]">
           <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
             <h3 className="font-black text-slate-900 flex items-center gap-2"><CalendarIcon className="w-5 h-5 text-blue-600" />{monthNames[month]} {year}</h3>
@@ -104,7 +106,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
                   <div className="mt-2 space-y-1">
                     {aberturas.map((t, idx) => (
                       <div key={idx} className={`p-1.5 rounded-lg border shadow-sm ${getTenderStatus(t) === 'ok' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-rose-50 border-rose-100 text-rose-800'}`}>
-                        {!t.propostaEnviada && <div className="bg-rose-600 text-[7px] text-white font-black uppercase text-center py-0.5 rounded-sm mb-1 animate-pulse">SOLICITAR</div>}
+                        {!t.propostaEnviada && <div className="bg-rose-600 text-[7px] text-white font-black uppercase text-center py-0.5 rounded-sm mb-1 animate-pulse">DILIGÊNCIA</div>}
                         <p className="text-[9px] font-black truncate">{t.numeroEdital}</p>
                         <p className="text-[7px] truncate opacity-70">{t.empresa}</p>
                       </div>
@@ -136,8 +138,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders }) => {
                     <div className="mb-3 p-3 bg-rose-600 rounded-2xl flex items-center gap-3 animate-pulse shadow-lg shadow-rose-200">
                       <AlertTriangle className="w-5 h-5 text-white" />
                       <div>
-                        <p className="text-[10px] font-black text-white uppercase leading-none">Solicitar Valores</p>
-                        <p className="text-[9px] font-bold text-rose-100 uppercase">Diligência Pendente!</p>
+                        <p className="text-[10px] font-black text-white uppercase leading-none">Diligência de Proposta</p>
+                        <p className="text-[9px] font-bold text-rose-100 uppercase">Pendente de Participação!</p>
                       </div>
                     </div>
                   )}
