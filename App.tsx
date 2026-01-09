@@ -54,6 +54,21 @@ const App: React.FC = () => {
     localStorage.setItem('qa_lists', JSON.stringify(listas));
   }, [listas]);
 
+  // --- FUNÇÕES DE FORMATAÇÃO DE MOEDA (R$ 1.000,00) ---
+  const handleCurrencyInput = (field: string, value: string) => {
+    // Remove tudo que não é dígito
+    const onlyDigits = value.replace(/\D/g, "");
+    // Divide por 100 para ter os centavos
+    const numberValue = Number(onlyDigits) / 100;
+    handleInputChange(field, numberValue);
+  };
+
+  const formatCurrencyDisplay = (value: number | undefined) => {
+    if (value === undefined || value === null) return '';
+    return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+  // ----------------------------------------------------
+
   const initialFormState = {
     empresa: '',
     orgaoLicitante: '',
@@ -171,6 +186,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-zinc-50 overflow-hidden font-sans text-zinc-900">
+      {/* Modais */}
       {showModal && modalType && (
         <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
           <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -196,6 +212,7 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {/* Modal de Gestão Operacional */}
       {managingTender && (
         <div className="fixed inset-0 bg-zinc-900/80 backdrop-blur-md flex items-center justify-center z-[130] p-6 overflow-y-auto">
           <div className="bg-white rounded-[48px] shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col overflow-hidden animate-in zoom-in duration-300">
@@ -231,6 +248,69 @@ const App: React.FC = () => {
                     <option value="N/A">Definir Colocação...</option>
                     {listas.posicoes.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
+                </div>
+              </div>
+
+              {/* SEÇÃO FINANCEIRA DE EDIÇÃO RÁPIDA (MODAL) */}
+              <div className="bg-emerald-50/50 rounded-[40px] p-8 border border-emerald-100 space-y-6">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-lg font-black text-zinc-900 flex items-center gap-3">
+                    <DollarSign className="w-5 h-5 text-emerald-600" /> Controle Financeiro
+                  </h4>
+                  <span className="bg-white px-3 py-1 rounded-lg text-[10px] font-black uppercase text-emerald-600 border border-emerald-100">Edição Rápida</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-zinc-400 uppercase">Valor Referência</label>
+                    <div className="relative group">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><span className="text-zinc-400 font-bold text-xs">R$</span></div>
+                      <input 
+                        type="text" 
+                        value={formatCurrencyDisplay(managingTender.valorReferencia)} 
+                        onChange={(e) => {
+                           const val = Number(e.target.value.replace(/\D/g, "")) / 100;
+                           setManagingTender({...managingTender, valorReferencia: val});
+                        }}
+                        className="w-full pl-8 pr-4 py-3 bg-white border border-zinc-200 rounded-xl font-bold text-zinc-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2 bg-white p-4 rounded-2xl border border-emerald-100 shadow-sm grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-zinc-400 uppercase">Tipo de Limite</label>
+                      <select 
+                        value={managingTender.tipoLicitacao || 'Valor'}
+                        onChange={(e) => setManagingTender({...managingTender, tipoLicitacao: e.target.value as 'Valor' | 'Desconto'})}
+                        className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg font-bold text-sm"
+                      >
+                        <option value="Valor">Valor (R$)</option>
+                        <option value="Desconto">Desconto (%)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-zinc-400 uppercase">
+                        {managingTender.tipoLicitacao === 'Valor' ? 'Mínimo (R$)' : 'Desconto Máx (%)'}
+                      </label>
+                      <div className="relative">
+                        {managingTender.tipoLicitacao === 'Valor' && <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><span className="text-emerald-400 font-bold text-xs">R$</span></div>}
+                        <input 
+                          type={managingTender.tipoLicitacao === 'Valor' ? "text" : "number"} 
+                          value={managingTender.tipoLicitacao === 'Valor' ? formatCurrencyDisplay(managingTender.valorMinimo) : managingTender.percentualDesconto}
+                          onChange={(e) => {
+                            if (managingTender.tipoLicitacao === 'Valor') {
+                              const val = Number(e.target.value.replace(/\D/g, "")) / 100;
+                              setManagingTender({...managingTender, valorMinimo: val});
+                            } else {
+                              setManagingTender({...managingTender, percentualDesconto: parseFloat(e.target.value)});
+                            }
+                          }}
+                          className={`w-full ${managingTender.tipoLicitacao === 'Valor' ? 'pl-8' : 'pl-3'} pr-3 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg font-black text-sm focus:ring-2 focus:ring-emerald-500 outline-none`}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -352,8 +432,19 @@ const App: React.FC = () => {
                   {activeTab === 3 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10 animate-in fade-in">
                       <div className="flex flex-col">
-                        <label className="block text-sm font-black text-zinc-700 mb-3 uppercase">Valor Referência (R$)</label>
-                        <input type="number" value={formData.valorReferencia} onChange={(e) => handleInputChange('valorReferencia', parseFloat(e.target.value))} className="px-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl font-bold focus:ring-4 focus:ring-violet-50 outline-none" />
+                        <label className="block text-sm font-black text-zinc-700 mb-3 uppercase">Valor Referência</label>
+                        <div className="relative group">
+                          <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                            <span className="text-zinc-400 font-black">R$</span>
+                          </div>
+                          <input 
+                            type="text" 
+                            placeholder="0,00"
+                            value={formatCurrencyDisplay(formData.valorReferencia)} 
+                            onChange={(e) => handleCurrencyInput('valorReferencia', e.target.value)} 
+                            className="w-full pl-12 pr-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl font-bold text-zinc-900 focus:ring-4 focus:ring-violet-50 focus:border-violet-300 outline-none transition-all placeholder:text-zinc-300" 
+                          />
+                        </div>
                       </div>
 
                       <div className="md:col-span-2 flex items-center gap-4 bg-zinc-50 p-4 rounded-2xl border border-zinc-200">
@@ -397,19 +488,30 @@ const App: React.FC = () => {
                               <label className="block text-[10px] font-black text-zinc-500 uppercase mb-2">
                                 {formData.tipoLicitacao === 'Valor' ? 'Valor Mínimo Aceitável (R$)' : 'Percentual Máximo de Desconto (%)'}
                               </label>
-                              <input 
-                                type="number" 
-                                value={formData.tipoLicitacao === 'Valor' ? formData.valorMinimo : formData.percentualDesconto} 
-                                onChange={(e) => {
-                                  if (formData.tipoLicitacao === 'Valor') {
-                                    handleInputChange('valorMinimo', parseFloat(e.target.value));
-                                  } else {
-                                    handleInputChange('percentualDesconto', parseFloat(e.target.value));
+                              <div className="relative group">
+                                {formData.tipoLicitacao === 'Valor' && (
+                                  <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                                    <span className="text-zinc-400 font-black">R$</span>
+                                  </div>
+                                )}
+                                <input 
+                                  type={formData.tipoLicitacao === 'Valor' ? "text" : "number"} 
+                                  value={
+                                    formData.tipoLicitacao === 'Valor' 
+                                      ? formatCurrencyDisplay(formData.valorMinimo) 
+                                      : formData.percentualDesconto
                                   }
-                                }}
-                                className="px-5 py-2.5 bg-white border border-zinc-200 rounded-xl font-black text-zinc-900 focus:ring-2 focus:ring-emerald-500 outline-none"
-                                placeholder={formData.tipoLicitacao === 'Valor' ? "0,00" : "0%"}
-                              />
+                                  onChange={(e) => {
+                                    if (formData.tipoLicitacao === 'Valor') {
+                                      handleCurrencyInput('valorMinimo', e.target.value);
+                                    } else {
+                                      handleInputChange('percentualDesconto', parseFloat(e.target.value));
+                                    }
+                                  }}
+                                  className={`w-full ${formData.tipoLicitacao === 'Valor' ? 'pl-12' : 'pl-5'} pr-5 py-2.5 bg-white border border-zinc-200 rounded-xl font-black text-zinc-900 focus:ring-2 focus:ring-emerald-500 outline-none`}
+                                  placeholder={formData.tipoLicitacao === 'Valor' ? "0,00" : "0%"}
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -432,20 +534,17 @@ const App: React.FC = () => {
 
             {activeMenu === 'acompanhamento-licitacoes' && (
               <div className="space-y-8 animate-in fade-in duration-500">
-                  {/* ... Cards de Resumo ... */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="bg-white p-8 rounded-[40px] border border-zinc-200 flex items-center gap-6 shadow-sm"><PlayCircle className="w-8 h-8 text-violet-600" /><div><p className="text-3xl font-black">{pregoesHoje.length}</p><p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Aberturas Hoje</p></div></div>
                     <div className="bg-white p-8 rounded-[40px] border border-zinc-200 flex items-center gap-6 shadow-sm"><Timer className="w-8 h-8 text-amber-600" /><div><p className="text-3xl font-black">{retornosHoje.length}</p><p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Retornos Pendentes</p></div></div>
                     <div className="bg-white p-8 rounded-[40px] border border-zinc-200 flex items-center gap-6 shadow-sm"><Gavel className="w-8 h-8 text-indigo-600" /><div><p className="text-3xl font-black">{emDisputaCount}</p><p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Aguardando/Em Disputa</p></div></div>
                   </div>
 
-                  {/* Switcher */}
                   <div className="flex bg-white p-2 rounded-[28px] border border-zinc-200 w-fit shadow-sm">
                     <button onClick={() => setViewType('list')} className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${viewType === 'list' ? 'bg-zinc-900 text-white shadow-xl' : 'text-zinc-400 hover:bg-zinc-50'}`}><ListTodo className="w-4 h-4" /> Visão em Lista</button>
                     <button onClick={() => setViewType('calendar')} className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${viewType === 'calendar' ? 'bg-zinc-900 text-white shadow-xl' : 'text-zinc-400 hover:bg-zinc-50'}`}><Calendar className="w-4 h-4" /> Calendário Operacional</button>
                   </div>
 
-                  {/* Lista com Correção Garantida */}
                   {viewType === 'list' ? (
                     <div className="bg-white rounded-[48px] border border-zinc-200 shadow-sm overflow-hidden">
                       <table className="w-full text-left">
