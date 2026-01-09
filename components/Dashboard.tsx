@@ -22,7 +22,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders, onEdit }) => {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
-  // Verifica se existem valores mínimos definidos pelo cliente
+  // Verifica se existem valores mínimos definidos (Gatilho para ficar Verde/Apto)
   const hasValues = (t: Tender) => {
     if (t.tipoLicitacao === 'Valor') {
       return t.valorMinimo && t.valorMinimo > 0;
@@ -31,16 +31,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders, onEdit }) => {
     }
   };
 
-  // Status "OK" (Apto) agora depende APENAS de ter os valores financeiros preenchidos
   const getTenderStatus = (t: Tender) => {
-    // Se tem valores mínimos definidos, está apto para participação
+    // Se tem valores, está APTO. Se não tem, está PENDENTE.
     const isOk = hasValues(t);
     return isOk ? 'ok' : 'pending';
   };
 
   const upcomingTenders = tenders.filter(t => new Date(t.dataAbertura) >= now);
-  
-  // Pendente = Licitações que NÃO têm valores definidos
   const needsDiligence = upcomingTenders.filter(t => !hasValues(t));
   
   const stats = [
@@ -153,14 +150,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders, onEdit }) => {
                           onClick={() => onEdit(t)}
                           className={`cursor-pointer p-1.5 rounded-xl border shadow-sm transition-transform hover:scale-105 ${status === 'ok' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-rose-50 border-rose-100 text-rose-800'}`}
                         >
-                          {/* SE NÃO TIVER VALORES, MOSTRA O ALERTA */}
                           {!hasValues(t) && (
                             <div className="bg-rose-600 text-[7px] text-white font-black uppercase text-center py-0.5 rounded-md mb-1 animate-pulse">
                               URGÊNCIA
                             </div>
                           )}
-                          <p className="text-[9px] font-black truncate">{t.numeroEdital}</p>
-                          <p className="text-[7px] truncate opacity-60 leading-tight">{t.empresa}</p>
+                          {/* CORREÇÃO: Mostra Órgão como principal e Edital como sub */}
+                          <p className="text-[9px] font-black truncate">{t.orgaoLicitante || 'Órgão Indefinido'}</p>
+                          <p className="text-[7px] truncate opacity-60 leading-tight">{t.numeroEdital}</p>
                         </div>
                       );
                     })}
@@ -194,8 +191,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders, onEdit }) => {
                         <span className="text-lg font-black text-slate-900">{new Date(t.dataAbertura).getDate()}</span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-black text-slate-900 truncate">{t.numeroEdital}</p>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase truncate">{t.empresa}</p>
+                        {/* CORREÇÃO: ÓRGÃO E EMPRESA AGORA VISÍVEIS */}
+                        <p className="text-sm font-black text-slate-900 truncate" title={t.orgaoLicitante}>{t.orgaoLicitante || 'Órgão não informado'}</p>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase truncate">
+                          {t.numeroEdital} • {t.empresa}
+                        </p>
                       </div>
                     </div>
 
