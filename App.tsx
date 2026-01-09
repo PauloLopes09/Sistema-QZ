@@ -15,12 +15,11 @@ import { DynamicSelect } from './components/DynamicSelect';
 const App: React.FC = () => {
   const [activeMenu, setActiveMenu] = useState('dashboard');
   const [activeTab, setActiveTab] = useState(1);
-  const [viewType, setViewType] = useState<'list' | 'calendar'>('list');
   const [showSuccess, setShowSuccess] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<keyof DynamicLists | ''>('');
   const [newItemValue, setNewItemValue] = useState('');
-  const [currentDate, setCurrentDate] = useState(new Date()); // Estado compartilhado da data
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [editingId, setEditingId] = useState<string | null>(null);
    
   const [managingTender, setManagingTender] = useState<Tender & { 
@@ -48,7 +47,25 @@ const App: React.FC = () => {
    
   useEffect(() => {
     const savedTenders = localStorage.getItem('qa_tenders');
-    if (savedTenders) setTenders(JSON.parse(savedTenders));
+    if (savedTenders) {
+      const parsedTenders: Tender[] = JSON.parse(savedTenders);
+      
+      // --- LÓGICA DE ROLAGEM AUTOMÁTICA ---
+      // Se "Pode voltar a qualquer momento" estiver marcado E a data for anterior a hoje,
+      // trazemos para o dia de hoje automaticamente.
+      const todayISO = new Date().toLocaleDateString('en-CA');
+      
+      const updatedTenders = parsedTenders.map(t => {
+        // Verifica se é um retorno "qualquer momento" perdido no passado
+        if ((t as any).retornoQualquerMomento && t.dataRetorno && t.dataRetorno < todayISO) {
+          return { ...t, dataRetorno: todayISO }; // Atualiza para hoje
+        }
+        return t;
+      });
+
+      setTenders(updatedTenders);
+    }
+    
     const savedLists = localStorage.getItem('qa_lists');
     if (savedLists) setListas(JSON.parse(savedLists));
   }, []);
@@ -61,7 +78,7 @@ const App: React.FC = () => {
     localStorage.setItem('qa_lists', JSON.stringify(listas));
   }, [listas]);
 
-  // FUNÇÕES DE FORMATAÇÃO DE MOEDA
+  // FUNÇÕES DE FORMATAÇÃO E LÓGICA
   const handleCurrencyInput = (field: string, value: string) => {
     const onlyDigits = value.replace(/\D/g, "");
     const numberValue = Number(onlyDigits) / 100;
@@ -72,6 +89,31 @@ const App: React.FC = () => {
     if (value === undefined || value === null) return '';
     return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
+
+  const hasValues = (t: Tender) => {
+    if (t.tipoLicitacao === 'Valor') return t.valorMinimo && t.valorMinimo > 0;
+    return t.percentualDesconto && t.percentualDesconto > 0;
+  };
+
+  // Lógica de datas segura
+  const today = new Date();
+  const localToday = today.toLocaleDateString('en-CA'); 
+
+  // Filtros Globais para os Cards e Agenda
+  const upcomingTenders = tenders.filter(t => t.dataAbertura >= localToday).sort((a, b) => a.dataAbertura.localeCompare(b.dataAbertura));
+  const needsDiligence = upcomingTenders.filter(t => !hasValues(t));
+  const impugnacoes = tenders.filter(t => {
+    const dates = [t.prazoImpugnacao, t.prazoEsclarecimento].filter(Boolean);
+    return dates.some(d => d! >= localToday);
+  });
+  const aptos = upcomingTenders.filter(t => hasValues(t));
+
+  const stats = [
+    { label: 'Próximas Licitações', value: upcomingTenders.length, icon: Calendar, color: 'bg-blue-600', sub: 'Aberturas futuras' },
+    { label: 'Pendente de valores mínimos', value: needsDiligence.length, icon: DollarSign, color: 'bg-rose-600', sub: 'Pendente de Participação' },
+    { label: 'Impugnações e Esclarecimentos', value: impugnacoes.length, icon: Gavel, color: 'bg-amber-500', sub: 'Prazos em aberto' },
+    { label: 'Apto para Participação', value: aptos.length, icon: CheckCircle2, color: 'bg-emerald-600', sub: 'Participação confirmada' },
+  ];
 
   const initialFormState = {
     empresa: '', orgaoLicitante: '', numeroEdital: '', portal: '', objeto: '', categoria: '', situacao: 'Triagem', dataAbertura: '', horarioSessao: '', modoDisputa: '', prazoImpugnacao: '', prazoEsclarecimento: '', responsavel: '', valorReferencia: 0, validadeProposta: '60', exigeGarantia: false, valorGarantia: 0, propostaEnviada: false, tipoLicitacao: 'Valor', valorMinimo: 0, percentualDesconto: 0, statusAtual: TenderStatus.TRIAGEM, posicaoAtual: 'N/A', faseAtual: 'Lances', tipoLote: 'Unico', lotes: [], observacoes: '', recebeuValores: false,
@@ -104,7 +146,6 @@ const App: React.FC = () => {
   const closeModal = () => { setShowModal(false); setModalType(''); };
   const addItem = () => { if (newItemValue.trim() && modalType) { setListas(prev => ({ ...prev, [modalType]: [...prev[modalType as keyof DynamicLists], newItemValue.trim()] })); closeModal(); } };
   const removeItem = (type: keyof DynamicLists, index: number) => { setListas(prev => ({ ...prev, [type]: prev[type].filter((_, i) => i !== index) })); };
-
   const handleUpdateTender = () => { if (!managingTender) return; setTenders(prev => prev.map(t => t.id === managingTender.id ? managingTender : t)); setManagingTender(null); };
   const deleteTender = (id: string) => { if (confirm('Deseja realmente excluir este processo?')) { setTenders(prev => prev.filter(t => t.id !== id)); } };
   const handleFinalizeDispute = (tender: Tender) => { const nextStatus = TenderStatus.HABILITACAO; const updated = { ...tender, statusAtual: nextStatus, faseAtual: 'Habilitação / Documentação', observacoesPregao: (tender.observacoesPregao || '') + `\n[Log ${new Date().toLocaleDateString()}]: Disputa realizada. Movido para Habilitação.` }; setTenders(prev => prev.map(t => t.id === tender.id ? updated : t)); };
@@ -112,13 +153,9 @@ const App: React.FC = () => {
   const removeLot = (lotId: string) => { if (!managingTender) return; setManagingTender({ ...managingTender, lotes: managingTender.lotes.filter(l => l.id !== lotId) }); };
   const addLotToManaging = () => { if (!managingTender) return; const newLot: Lot = { id: Math.random().toString(36).substr(2, 5), numero: (managingTender.lotes.length + 1).toString().padStart(2, '0'), colocacao: 'N/A' }; setManagingTender({ ...managingTender, lotes: [...managingTender.lotes, newLot] }); };
 
-  // Filtros para a Agenda Lateral
-  const todayStr = new Date().toISOString().split('T')[0];
-  const upcomingTenders = tenders.filter(t => t.dataAbertura >= todayStr).sort((a, b) => a.dataAbertura.localeCompare(b.dataAbertura));
-
   return (
     <div className="flex h-screen bg-zinc-50 overflow-hidden font-sans text-zinc-900">
-      {/* ... [Modal de Listas Dinâmicas - Mantido Igual] ... */}
+      {/* ... [Modal de Listas Dinâmicas] ... */}
       {showModal && modalType && (
         <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
           <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -144,29 +181,23 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* ... [Modal de Gestão Operacional - CÓDIGO DO MODAL ANTERIOR MANTIDO AQUI] ... */}
-      {/* (Devido ao limite de caracteres, assuma que o modal de gestão é IDÊNTICO ao enviado na resposta anterior, com o campo de valor final e recurso) */}
+      {/* ... [Modal de Gestão Operacional] ... */}
       {managingTender && (
         <div className="fixed inset-0 bg-zinc-900/80 backdrop-blur-md flex items-center justify-center z-[130] p-6 overflow-y-auto">
-           {/* ... Copiar o conteúdo do Modal da resposta anterior aqui ... */}
            <div className="bg-white rounded-[48px] shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col overflow-hidden animate-in zoom-in duration-300">
-            {/* Cabeçalho do Modal */}
+            {/* Header */}
             <div className="p-8 border-b border-zinc-100 bg-zinc-50 flex items-center justify-between">
               <div className="flex items-center gap-5">
                 <div className="w-16 h-16 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-violet-200"><Edit3 className="w-8 h-8" /></div>
-                <div>
-                  <h3 className="text-2xl font-black text-zinc-900 leading-tight">Painel de Acompanhamento</h3>
-                  <p className="text-sm font-bold text-violet-600 uppercase tracking-widest flex items-center gap-2">{managingTender.numeroEdital} <span className="w-1.5 h-1.5 rounded-full bg-zinc-300" /> {managingTender.empresa}</p>
-                </div>
+                <div><h3 className="text-2xl font-black text-zinc-900 leading-tight">Painel de Acompanhamento</h3><p className="text-sm font-bold text-violet-600 uppercase tracking-widest flex items-center gap-2">{managingTender.numeroEdital} <span className="w-1.5 h-1.5 rounded-full bg-zinc-300" /> {managingTender.empresa}</p></div>
               </div>
               <div className="flex items-center gap-4">
                   <button onClick={() => setManagingTender(null)} className="p-4 hover:bg-zinc-200 rounded-full transition-all"><X className="w-6 h-6 text-zinc-500" /></button>
               </div>
             </div>
-            
-            {/* Corpo do Modal */}
+            {/* Body */}
             <div className="flex-1 overflow-y-auto p-10 space-y-12 bg-white">
-               {/* Status e Fluxo */}
+               {/* Status */}
                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <h4 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-3"><FileText className="w-4 h-4" /> Status & Fluxo</h4>
@@ -183,7 +214,7 @@ const App: React.FC = () => {
                     </select>
                   </div>
                </div>
-
+               
                {/* Intenção de Recurso */}
                {managingTender.faseAtual === 'Intenção de Recurso' && (
                 <div className="bg-orange-50 rounded-[40px] p-8 border border-orange-200 shadow-sm space-y-6 animate-in slide-in-from-top-4 duration-300">
@@ -202,25 +233,13 @@ const App: React.FC = () => {
                 </div>
                )}
 
-               {/* Controle Financeiro + Valor Final */}
+               {/* Financeiro */}
                <div className="bg-emerald-50/50 rounded-[40px] p-8 border border-emerald-100 space-y-6">
                   <div className="flex items-center justify-between"><h4 className="text-lg font-black text-zinc-900 flex items-center gap-3"><DollarSign className="w-5 h-5 text-emerald-600" /> Controle Financeiro</h4><span className="bg-white px-3 py-1 rounded-lg text-[10px] font-black uppercase text-emerald-600 border border-emerald-100">Edição Rápida</span></div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase">Valor Referência</label>
-                      <input type="text" value={formatCurrencyDisplay(managingTender.valorReferencia)} onChange={(e) => {const val = Number(e.target.value.replace(/\D/g, "")) / 100; setManagingTender({...managingTender, valorReferencia: val});}} className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl font-bold text-zinc-500" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-zinc-400 uppercase">{managingTender.tipoLicitacao === 'Valor' ? 'Mínimo (R$)' : 'Desconto Máx (%)'}</label>
-                      <input type={managingTender.tipoLicitacao === 'Valor' ? "text" : "number"} value={managingTender.tipoLicitacao === 'Valor' ? formatCurrencyDisplay(managingTender.valorMinimo) : managingTender.percentualDesconto} onChange={(e) => {if (managingTender.tipoLicitacao === 'Valor') {const val = Number(e.target.value.replace(/\D/g, "")) / 100; setManagingTender({...managingTender, valorMinimo: val});} else {setManagingTender({...managingTender, percentualDesconto: parseFloat(e.target.value)});}}} className="w-full px-3 py-3 bg-white border border-zinc-200 text-zinc-800 rounded-xl font-bold text-sm" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-emerald-600 uppercase">Valor Final (Arrematado)</label>
-                      <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><span className="text-emerald-600 font-bold text-xs">R$</span></div>
-                        <input type="text" value={formatCurrencyDisplay(managingTender.valorFinal)} onChange={(e) => {const val = Number(e.target.value.replace(/\D/g, "")) / 100; setManagingTender({...managingTender, valorFinal: val});}} className="w-full pl-8 pr-4 py-3 bg-emerald-100 border border-emerald-200 rounded-xl font-black text-emerald-900 focus:ring-2 focus:ring-emerald-500" placeholder="0,00" />
-                      </div>
-                    </div>
+                    <div className="space-y-2"><label className="text-[10px] font-black text-zinc-400 uppercase">Valor Referência</label><input type="text" value={formatCurrencyDisplay(managingTender.valorReferencia)} onChange={(e) => {const val = Number(e.target.value.replace(/\D/g, "")) / 100; setManagingTender({...managingTender, valorReferencia: val});}} className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl font-bold text-zinc-500" /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black text-zinc-400 uppercase">{managingTender.tipoLicitacao === 'Valor' ? 'Mínimo (R$)' : 'Desconto Máx (%)'}</label><input type={managingTender.tipoLicitacao === 'Valor' ? "text" : "number"} value={managingTender.tipoLicitacao === 'Valor' ? formatCurrencyDisplay(managingTender.valorMinimo) : managingTender.percentualDesconto} onChange={(e) => {if (managingTender.tipoLicitacao === 'Valor') {const val = Number(e.target.value.replace(/\D/g, "")) / 100; setManagingTender({...managingTender, valorMinimo: val});} else {setManagingTender({...managingTender, percentualDesconto: parseFloat(e.target.value)});}}} className="w-full px-3 py-3 bg-white border border-zinc-200 text-zinc-800 rounded-xl font-bold text-sm" /></div>
+                    <div className="space-y-2"><label className="text-[10px] font-black text-emerald-600 uppercase">Valor Final (Arrematado)</label><div className="relative group"><div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><span className="text-emerald-600 font-bold text-xs">R$</span></div><input type="text" value={formatCurrencyDisplay(managingTender.valorFinal)} onChange={(e) => {const val = Number(e.target.value.replace(/\D/g, "")) / 100; setManagingTender({...managingTender, valorFinal: val});}} className="w-full pl-8 pr-4 py-3 bg-emerald-100 border border-emerald-200 rounded-xl font-black text-emerald-900 focus:ring-2 focus:ring-emerald-500" placeholder="0,00" /></div></div>
                   </div>
                </div>
 
@@ -231,10 +250,7 @@ const App: React.FC = () => {
                     <div className="space-y-4">
                       <input type="date" value={managingTender.dataRetorno || ''} onChange={(e) => setManagingTender({...managingTender, dataRetorno: e.target.value})} className="w-full px-5 py-4 bg-white border border-zinc-300 rounded-2xl font-bold" />
                       <input type="time" value={managingTender.horarioRetorno || ''} disabled={managingTender.retornoQualquerMomento} onChange={(e) => setManagingTender({...managingTender, horarioRetorno: e.target.value})} className={`w-full px-5 py-4 bg-white border border-zinc-300 rounded-2xl font-bold ${managingTender.retornoQualquerMomento ? 'opacity-50 cursor-not-allowed bg-zinc-100' : ''}`} />
-                      <div className="flex items-center gap-3 bg-amber-50 p-4 rounded-xl border border-amber-100">
-                        <input type="checkbox" checked={managingTender.retornoQualquerMomento || false} onChange={(e) => setManagingTender({...managingTender, retornoQualquerMomento: e.target.checked, horarioRetorno: e.target.checked ? '' : managingTender.horarioRetorno})} className="w-5 h-5 rounded text-amber-600" />
-                        <label className="text-xs font-black uppercase text-amber-800">Voltar a qualquer momento</label>
-                      </div>
+                      <div className="flex items-center gap-3 bg-amber-50 p-4 rounded-xl border border-amber-100"><input type="checkbox" checked={managingTender.retornoQualquerMomento || false} onChange={(e) => setManagingTender({...managingTender, retornoQualquerMomento: e.target.checked, horarioRetorno: e.target.checked ? '' : managingTender.horarioRetorno})} className="w-5 h-5 rounded text-amber-600" /><label className="text-xs font-black uppercase text-amber-800">Voltar a qualquer momento</label></div>
                     </div>
                   </div>
                   <div className="lg:col-span-8 space-y-6">
@@ -243,7 +259,7 @@ const App: React.FC = () => {
                   </div>
                </div>
             </div>
-            {/* Footer do Modal */}
+            {/* Footer */}
             <div className="p-10 border-t border-zinc-100 bg-zinc-50 flex justify-between items-center">
               <button onClick={() => deleteTender(managingTender.id)} className="px-6 py-4 text-rose-500 font-black uppercase tracking-widest text-[10px] hover:bg-rose-50 rounded-2xl">Excluir</button>
               <div className="flex gap-4">
@@ -260,10 +276,7 @@ const App: React.FC = () => {
         <div className="p-10">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-violet-200 hover:scale-105 transition-transform"><Zap className="w-7 h-7 text-white" /></div>
-            <div>
-              <h1 className="text-2xl font-black text-zinc-900 tracking-tighter">SISTEMA QZ</h1>
-              <p className="text-[10px] font-black text-violet-600 uppercase tracking-[0.1em] opacity-90">Gestão de Licitações</p>
-            </div>
+            <div><h1 className="text-2xl font-black text-zinc-900 tracking-tighter">SISTEMA QZ</h1><p className="text-[10px] font-black text-violet-600 uppercase tracking-[0.1em] opacity-90">Gestão de Licitações</p></div>
           </div>
         </div>
         <nav className="flex-1 px-6 space-y-2">
@@ -286,58 +299,55 @@ const App: React.FC = () => {
           <div className="max-w-7xl mx-auto space-y-10">
             {showSuccess && <div className="bg-emerald-500 p-5 rounded-3xl flex items-center gap-4 shadow-xl shadow-emerald-100 animate-in slide-in-from-top duration-300"><CheckCircle className="w-6 h-6 text-white" /><div><p className="text-white font-black uppercase text-xs">Sucesso!</p><p className="text-emerald-100 text-sm font-bold">Processo salvo com sucesso.</p></div></div>}
 
-            {/* PAINEL DE ACOMPANHAMENTO (Dashboard e Lista/Calendário Unificados) */}
+            {/* PAINEL DE ACOMPANHAMENTO (Dashboard + Lista) */}
             {(activeMenu === 'dashboard' || activeMenu === 'acompanhamento-licitacoes') && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in duration-500">
                 
                 {/* Coluna Principal (Esquerda - 8 colunas) */}
                 <div className="lg:col-span-8 space-y-8">
-                  {/* Se for Dashboard, mostra os Cards */}
+                  {/* Cards de Estatísticas */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {stats.map((stat, idx) => (
+                      <div key={idx} className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm transition-all hover:shadow-md">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className={`${stat.color} p-3 rounded-2xl text-white shadow-lg`}><stat.icon className="w-6 h-6" /></div>
+                          <span className="text-3xl font-black text-slate-900">{stat.value}</span>
+                        </div>
+                        <div><p className="text-sm font-black text-slate-800 leading-tight">{stat.label}</p><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{stat.sub}</p></div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Calendário Visual */}
                   <Dashboard tenders={tenders} onEdit={handleEditProposal} currentDate={currentDate} setCurrentDate={setCurrentDate} />
                   
-                  {/* Se for Acompanhamento, mostra o Switcher e o Conteúdo (Lista ou Calendário) */}
-                  {activeMenu === 'acompanhamento-licitacoes' && (
-                    <>
-                      <div className="flex bg-white p-2 rounded-[28px] border border-zinc-200 w-fit shadow-sm">
-                        <button onClick={() => setViewType('list')} className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${viewType === 'list' ? 'bg-zinc-900 text-white shadow-xl' : 'text-zinc-400 hover:bg-zinc-50'}`}><ListTodo className="w-4 h-4" /> Lista por Empresa</button>
-                        <button onClick={() => setViewType('calendar')} className={`px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${viewType === 'calendar' ? 'bg-zinc-900 text-white shadow-xl' : 'text-zinc-400 hover:bg-zinc-50'}`}><Calendar className="w-4 h-4" /> Calendário Completo</button>
-                      </div>
-
-                      {viewType === 'list' ? (
-                        <div className="space-y-12">
-                          {Array.from(new Set(tenders.map(t => t.empresa))).map((company) => {
-                            const companyTenders = tenders.filter(t => t.empresa === company);
-                            return (
-                              <div key={company} className="bg-white rounded-[48px] border border-zinc-200 shadow-sm overflow-hidden">
-                                <div className="px-8 py-6 border-b border-zinc-100 bg-zinc-50/50 flex items-center gap-4">
-                                  <div className="w-12 h-12 rounded-2xl bg-white border border-zinc-200 flex items-center justify-center shadow-sm"><Building className="w-6 h-6 text-violet-600" /></div>
-                                  <div><h3 className="text-lg font-black text-zinc-900">{company}</h3><p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{companyTenders.length} Processos</p></div>
-                                </div>
-                                <table className="w-full text-left">
-                                  <thead><tr className="bg-zinc-50/50 border-b border-zinc-100"><th className="p-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Processo</th><th className="p-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Status</th><th className="p-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Resultado</th><th className="p-8"></th></tr></thead>
-                                  <tbody className="divide-y divide-zinc-50">
-                                    {companyTenders.map((tender) => (
-                                      <tr key={tender.id} className="hover:bg-zinc-50/50 group transition-all cursor-pointer" onClick={() => setManagingTender(tender)}>
-                                        <td className="p-8"><p className="font-black text-zinc-900 text-base">{tender.numeroEdital}</p><p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">{tender.orgaoLicitante}</p></td>
-                                        <td className="p-8"><span className={`inline-block px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest ${tender.statusAtual === TenderStatus.EM_DISPUTA ? 'bg-indigo-600 text-white' : 'bg-zinc-100 text-zinc-600'}`}>{tender.statusAtual}</span></td>
-                                        <td className="p-8"><p className="text-lg font-black text-zinc-800">{tender.posicaoAtual}</p></td>
-                                        <td className="p-8 text-right"><button onClick={(e) => { e.stopPropagation(); setManagingTender(tender); }} className="px-6 py-3 bg-zinc-900 text-white text-[10px] font-black uppercase rounded-2xl hover:bg-violet-600 transition-all">Gerenciar</button></td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            )
-                          })}
+                  {/* Lista por Empresa (Fixa abaixo do Calendário) */}
+                  <div className="space-y-12">
+                    {Array.from(new Set(tenders.map(t => t.empresa))).map((company) => {
+                      const companyTenders = tenders.filter(t => t.empresa === company);
+                      return (
+                        <div key={company} className="bg-white rounded-[48px] border border-zinc-200 shadow-sm overflow-hidden">
+                          <div className="px-8 py-6 border-b border-zinc-100 bg-zinc-50/50 flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-white border border-zinc-200 flex items-center justify-center shadow-sm"><Building className="w-6 h-6 text-violet-600" /></div>
+                            <div><h3 className="text-lg font-black text-zinc-900">{company}</h3><p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">{companyTenders.length} Processos</p></div>
+                          </div>
+                          <table className="w-full text-left">
+                            <thead><tr className="bg-zinc-50/50 border-b border-zinc-100"><th className="p-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Processo</th><th className="p-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Status</th><th className="p-8 text-[10px] font-black text-zinc-400 uppercase tracking-widest">Resultado</th><th className="p-8"></th></tr></thead>
+                            <tbody className="divide-y divide-zinc-50">
+                              {companyTenders.map((tender) => (
+                                <tr key={tender.id} className="hover:bg-zinc-50/50 group transition-all cursor-pointer" onClick={() => setManagingTender(tender)}>
+                                  <td className="p-8"><p className="font-black text-zinc-900 text-base">{tender.numeroEdital}</p><p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-1">{tender.orgaoLicitante}</p></td>
+                                  <td className="p-8"><span className={`inline-block px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest ${tender.statusAtual === TenderStatus.EM_DISPUTA ? 'bg-indigo-600 text-white' : 'bg-zinc-100 text-zinc-600'}`}>{tender.statusAtual}</span></td>
+                                  <td className="p-8"><p className="text-lg font-black text-zinc-800">{tender.posicaoAtual}</p></td>
+                                  <td className="p-8 text-right"><button onClick={(e) => { e.stopPropagation(); setManagingTender(tender); }} className="px-6 py-3 bg-zinc-900 text-white text-[10px] font-black uppercase rounded-2xl hover:bg-violet-600 transition-all">Gerenciar</button></td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
-                      ) : (
-                        // Aqui chamamos o Dashboard novamente mas apenas com a view de calendário se necessário, 
-                        // ou você pode replicar a lógica do calendário aqui. 
-                        // Para simplificar, vou manter vazio pois o Dashboard já renderiza o calendario.
-                        <div className="text-center p-10 text-zinc-400 font-bold">Visualize o calendário acima no Painel Principal.</div>
-                      )}
-                    </>
-                  )}
+                      )
+                    })}
+                  </div>
                 </div>
 
                 {/* Coluna Lateral (Direita - 4 colunas) - AGENDA FIXA */}
@@ -379,18 +389,15 @@ const App: React.FC = () => {
             )}
 
             {activeMenu === 'cadastro-propostas' && (
-              // ... [O código do formulário de cadastro é idêntico ao da resposta anterior, mantive a lógica de limpeza] ...
-              // Para economizar espaço na resposta, vou simplificar aqui, mas você deve usar o bloco 'activeTab === 2' e 'activeTab === 3' da resposta anterior que já removeu os campos.
               <div className="space-y-8 animate-in fade-in duration-300">
-                 {/* ... Conteúdo do Cadastro (Use o código da resposta anterior, garantindo remover Responsável e Checkbox) ... */}
-                 {/* Vou colocar apenas o esqueleto para ilustrar onde vai */}
+                 {/* ... Conteúdo do Cadastro (Mantido da versão anterior) ... */}
+                 {/* Para simplificar, vou manter a estrutura, use o código da resposta anterior se precisar ajustar os campos novamente */}
                  <div className="flex gap-2 bg-white p-2 rounded-[28px] border border-zinc-200 shadow-sm">
                     {[{ id: 1, icon: Building, label: 'Empresa & Órgão' }, { id: 2, icon: Clock, label: 'Prazos' }, { id: 3, icon: DollarSign, label: 'Financeiro' }].map(tab => (
                       <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-[22px] transition-all font-black text-[10px] uppercase tracking-widest ${activeTab === tab.id ? 'bg-violet-600 text-white shadow-xl shadow-violet-100' : 'text-zinc-400 hover:bg-zinc-50'}`}><tab.icon className="w-4 h-4" />{tab.label}</button>
                     ))}
                  </div>
                  <div className="bg-white rounded-[48px] border border-zinc-200 p-12 space-y-10 min-h-[500px] shadow-sm">
-                    {/* Tab 1: Mantida */}
                     {activeTab === 1 && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 animate-in fade-in">
                         <DynamicSelect label="Empresa Participante" value={formData.empresa || ''} onChange={(v) => handleInputChange('empresa', v)} options={listas.empresas} listType="empresas" onAddClick={openModal} required />
@@ -400,7 +407,6 @@ const App: React.FC = () => {
                         <div className="md:col-span-2"><label className="block text-sm font-black text-zinc-700 mb-3 uppercase">Objeto</label><textarea rows={4} value={formData.objeto} onChange={(e) => handleInputChange('objeto', e.target.value)} className="w-full px-6 py-5 bg-zinc-50 border border-zinc-200 rounded-3xl font-medium focus:ring-4 focus:ring-violet-50 outline-none resize-none" /></div>
                       </div>
                     )}
-                    {/* Tab 2: SEM RESPONSÁVEL */}
                     {activeTab === 2 && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 animate-in fade-in">
                         <div className="flex flex-col"><label className="block text-sm font-black text-zinc-700 mb-3 uppercase">Data da Abertura</label><input type="date" value={formData.dataAbertura} onChange={(e) => handleInputChange('dataAbertura', e.target.value)} className="px-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl font-bold focus:ring-4 focus:ring-violet-50 outline-none" /></div>
@@ -410,7 +416,6 @@ const App: React.FC = () => {
                         <DynamicSelect label="Modo de Disputa" value={formData.modoDisputa || ''} onChange={(v) => handleInputChange('modoDisputa', v)} options={listas.modosDisputa} listType="modosDisputa" onAddClick={openModal} />
                       </div>
                     )}
-                    {/* Tab 3: SEM CHECKBOX 'ENVIADA' */}
                     {activeTab === 3 && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 animate-in fade-in">
                         <div className="flex flex-col"><label className="block text-sm font-black text-zinc-700 mb-3 uppercase">Valor Referência</label><div className="relative group"><div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none"><span className="text-zinc-400 font-black">R$</span></div><input type="text" value={formatCurrencyDisplay(formData.valorReferencia)} onChange={(e) => handleCurrencyInput('valorReferencia', e.target.value)} className="w-full pl-12 pr-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl font-bold text-zinc-900 focus:ring-4 focus:ring-violet-50 focus:border-violet-300 outline-none" /></div></div>
