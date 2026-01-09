@@ -22,22 +22,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders, onEdit }) => {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
+  // Helper para verificar se existem valores cadastrados
+  const hasValues = (t: Tender) => {
+    if (t.tipoLicitacao === 'Valor') {
+      return t.valorMinimo && t.valorMinimo > 0;
+    } else {
+      return t.percentualDesconto && t.percentualDesconto > 0;
+    }
+  };
+
+  // Status "OK" (Apto) depende de ter informações básicas E valores financeiros preenchidos
   const getTenderStatus = (t: Tender) => {
     const hasBasicInfo = t.empresa && t.orgaoLicitante && t.numeroEdital && t.objeto;
     const hasFinancials = t.valorReferencia > 0;
-    const hasGarantiaIfRequired = !t.exigeGarantia || (t.exigeGarantia && t.valorGarantia && t.valorGarantia > 0);
-    
-    const proposalOk = t.propostaEnviada && (
-      (t.tipoLicitacao === 'Valor' && t.valorMinimo && t.valorMinimo > 0) ||
-      (t.tipoLicitacao === 'Desconto' && t.percentualDesconto && t.percentualDesconto > 0)
-    );
-    
-    const isOk = hasBasicInfo && hasFinancials && hasGarantiaIfRequired && proposalOk;
+    // Se tem valores mínimos definidos, está apto para disputa/envio
+    const isOk = hasBasicInfo && hasFinancials && hasValues(t);
     return isOk ? 'ok' : 'pending';
   };
 
   const upcomingTenders = tenders.filter(t => new Date(t.dataAbertura) >= now);
-  const needsDiligence = upcomingTenders.filter(t => !t.propostaEnviada);
+  // Pendente de valores = Tenders futuros que NÃO têm valores definidos
+  const needsDiligence = upcomingTenders.filter(t => !hasValues(t));
   
   const stats = [
     { 
@@ -149,9 +154,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders, onEdit }) => {
                           onClick={() => onEdit(t)}
                           className={`cursor-pointer p-1.5 rounded-xl border shadow-sm transition-transform hover:scale-105 ${status === 'ok' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-rose-50 border-rose-100 text-rose-800'}`}
                         >
-                          {!t.propostaEnviada && (
+                          {/* ALERTA DE DILIGÊNCIA SE NÃO TIVER VALORES */}
+                          {!hasValues(t) && (
                             <div className="bg-rose-600 text-[7px] text-white font-black uppercase text-center py-0.5 rounded-md mb-1 animate-pulse">
-                              DILIGÊNCIA
+                              URGÊNCIA
                             </div>
                           )}
                           <p className="text-[9px] font-black truncate">{t.numeroEdital}</p>
@@ -175,6 +181,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders, onEdit }) => {
             <div className="space-y-4 overflow-y-auto max-h-[600px] pr-2 scrollbar-thin">
               {upcomingTenders.map((t, idx) => {
                 const status = getTenderStatus(t);
+                const missingValues = !hasValues(t);
+
                 return (
                   <div 
                     key={idx} 
@@ -192,12 +200,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders, onEdit }) => {
                       </div>
                     </div>
 
-                    {!t.propostaEnviada && (
+                    {missingValues && (
                       <div className="mb-3 p-3 bg-rose-600 rounded-2xl flex items-center gap-3 animate-pulse shadow-lg shadow-rose-100">
                         <AlertTriangle className="w-5 h-5 text-white" />
                         <div>
-                          <p className="text-[10px] font-black text-white uppercase leading-none">Diligência</p>
-                          <p className="text-[9px] font-bold text-rose-50 uppercase mt-1">Solicitar valores mínimos</p>
+                          <p className="text-[10px] font-black text-white uppercase leading-none">Pendente</p>
+                          <p className="text-[9px] font-bold text-rose-50 uppercase mt-1">Aguardando valores mínimos</p>
                         </div>
                       </div>
                     )}
@@ -207,7 +215,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ tenders, onEdit }) => {
                         <Clock className="w-3 h-3" /> {t.horarioSessao || '--:--'}
                       </span>
                       <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${status === 'ok' ? 'text-emerald-600 bg-emerald-100' : 'text-rose-600 bg-rose-100'}`}>
-                        {status === 'ok' ? 'Apto' : 'Pendente'}
+                        {status === 'ok' ? 'Apto' : 'Urgência'}
                       </span>
                     </div>
                   </div>
