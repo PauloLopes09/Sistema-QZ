@@ -11,7 +11,7 @@ import {
 import { Tender, TenderStatus, ActivityLog, DynamicLists, BidType, Lot } from './types';
 import { Dashboard } from './components/Dashboard';
 import { DynamicSelect } from './components/DynamicSelect';
-import { supabase } from './lib/supabaseClient'; 
+import { supabase } from './lib/supabaseClient';
 
 const App: React.FC = () => {
   const [activeMenu, setActiveMenu] = useState('dashboard');
@@ -47,7 +47,7 @@ const App: React.FC = () => {
 
   const [tenders, setTenders] = useState<Tender[]>([]);
     
-  // --- 1. CARREGAR DADOS DO SUPABASE ---
+  // --- CARREGAR DADOS DO SUPABASE ---
   useEffect(() => {
     fetchTenders();
     const savedLists = localStorage.getItem('qa_lists');
@@ -58,9 +58,8 @@ const App: React.FC = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase.from('licitacoes').select('*');
-      
       if (error) {
-        console.error('Erro ao buscar licitações:', error);
+        console.error('Erro ao buscar:', error);
       } else if (data) {
         const todayISO = new Date().toLocaleDateString('en-CA');
         const updatedTenders = data.map((t: any) => {
@@ -72,17 +71,15 @@ const App: React.FC = () => {
         setTenders(updatedTenders);
       }
     } catch (err) {
-      console.error('Erro de conexão:', err);
+      console.error('Erro conexão:', err);
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => {
-    localStorage.setItem('qa_lists', JSON.stringify(listas));
-  }, [listas]);
+  useEffect(() => { localStorage.setItem('qa_lists', JSON.stringify(listas)); }, [listas]);
 
-  // FUNÇÕES DE FORMATAÇÃO E LÓGICA
+  // --- FUNÇÕES AUXILIARES ---
   const handleCurrencyInput = (field: string, value: string) => {
     const onlyDigits = value.replace(/\D/g, "");
     const numberValue = Number(onlyDigits) / 100;
@@ -133,7 +130,7 @@ const App: React.FC = () => {
     setActiveTab(3);
   };
 
-  // --- 2. SALVAR NO SUPABASE ---
+  // --- SALVAR NO SUPABASE ---
   const handleSave = async () => {
     const tenderData = { ...formData as Tender };
     
@@ -151,19 +148,13 @@ const App: React.FC = () => {
         const { error } = await supabase.from('licitacoes').insert(tenderData);
         if (error) throw error;
       }
-
       await fetchTenders(); 
       setShowSuccess(true);
       setTimeout(() => { 
-        setShowSuccess(false); 
-        setActiveMenu('acompanhamento-licitacoes'); 
-        setActiveTab(1); 
-        setEditingId(null); 
-        setFormData(initialFormState); 
+        setShowSuccess(false); setActiveMenu('acompanhamento-licitacoes'); setActiveTab(1); setEditingId(null); setFormData(initialFormState); 
       }, 1500);
-
     } catch (error: any) {
-      alert('Erro ao salvar no banco: ' + error.message);
+      alert('Erro ao salvar: ' + error.message);
     }
   };
 
@@ -179,9 +170,7 @@ const App: React.FC = () => {
       if (error) throw error;
       await fetchTenders();
       setManagingTender(null);
-    } catch (err: any) {
-      alert("Erro ao atualizar: " + err.message);
-    }
+    } catch (err: any) { alert("Erro ao atualizar: " + err.message); }
   };
 
   const deleteTender = async (id: string) => { 
@@ -191,11 +180,10 @@ const App: React.FC = () => {
         if (error) throw error;
         await fetchTenders();
         setManagingTender(null);
-      } catch (err: any) {
-        alert("Erro ao excluir: " + err.message);
-      }
+      } catch (err: any) { alert("Erro ao excluir: " + err.message); }
     } 
   };
+
   return (
     <div className="flex h-screen bg-zinc-50 overflow-hidden font-sans text-zinc-900">
       {showModal && modalType && (
