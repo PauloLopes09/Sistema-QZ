@@ -11,7 +11,7 @@ import {
 import { Tender, TenderStatus, ActivityLog, DynamicLists, BidType, Lot } from './types';
 import { Dashboard } from './components/Dashboard';
 import { DynamicSelect } from './components/DynamicSelect';
-import { supabase } from './lib/supabaseClient'; // Conexão com Supabase
+import { supabase } from './lib/supabaseClient'; 
 
 const App: React.FC = () => {
   const [activeMenu, setActiveMenu] = useState('dashboard');
@@ -50,7 +50,6 @@ const App: React.FC = () => {
   // --- 1. CARREGAR DADOS DO SUPABASE ---
   useEffect(() => {
     fetchTenders();
-    
     const savedLists = localStorage.getItem('qa_lists');
     if (savedLists) setListas(JSON.parse(savedLists));
   }, []);
@@ -58,7 +57,6 @@ const App: React.FC = () => {
   async function fetchTenders() {
     setLoading(true);
     try {
-      // Busca dados da tabela 'licitacoes'
       const { data, error } = await supabase.from('licitacoes').select('*');
       
       if (error) {
@@ -66,7 +64,6 @@ const App: React.FC = () => {
       } else if (data) {
         const todayISO = new Date().toLocaleDateString('en-CA');
         const updatedTenders = data.map((t: any) => {
-           // Lógica para trazer datas antigas para hoje se for "Qualquer Momento"
            if (t.retornoQualquerMomento && t.dataRetorno && t.dataRetorno < todayISO) {
              return { ...t, dataRetorno: todayISO };
            }
@@ -140,7 +137,6 @@ const App: React.FC = () => {
   const handleSave = async () => {
     const tenderData = { ...formData as Tender };
     
-    // Se for novo, gera ID e Data
     if (!editingId) {
        tenderData.id = Math.random().toString(36).substr(2, 9);
        tenderData.createdAt = new Date().toISOString();
@@ -149,23 +145,14 @@ const App: React.FC = () => {
 
     try {
       if (editingId) {
-        // Atualizar existente
-        const { error } = await supabase
-          .from('licitacoes')
-          .update(tenderData)
-          .eq('id', editingId);
-          
+        const { error } = await supabase.from('licitacoes').update(tenderData).eq('id', editingId);
         if (error) throw error;
       } else {
-        // Criar novo
-        const { error } = await supabase
-          .from('licitacoes')
-          .insert(tenderData);
-          
+        const { error } = await supabase.from('licitacoes').insert(tenderData);
         if (error) throw error;
       }
 
-      await fetchTenders(); // Atualiza a tela
+      await fetchTenders(); 
       setShowSuccess(true);
       setTimeout(() => { 
         setShowSuccess(false); 
@@ -185,18 +172,11 @@ const App: React.FC = () => {
   const addItem = () => { if (newItemValue.trim() && modalType) { setListas(prev => ({ ...prev, [modalType]: [...prev[modalType as keyof DynamicLists], newItemValue.trim()] })); closeModal(); } };
   const removeItem = (type: keyof DynamicLists, index: number) => { setListas(prev => ({ ...prev, [type]: prev[type].filter((_, i) => i !== index) })); };
   
-  // --- 3. ATUALIZAÇÃO RÁPIDA (MODAL) NO SUPABASE ---
   const handleUpdateTender = async () => { 
     if (!managingTender) return; 
-    
     try {
-      const { error } = await supabase
-        .from('licitacoes')
-        .update(managingTender)
-        .eq('id', managingTender.id);
-        
+      const { error } = await supabase.from('licitacoes').update(managingTender).eq('id', managingTender.id);
       if (error) throw error;
-
       await fetchTenders();
       setManagingTender(null);
     } catch (err: any) {
@@ -204,7 +184,6 @@ const App: React.FC = () => {
     }
   };
 
-  // --- 4. EXCLUIR NO SUPABASE ---
   const deleteTender = async (id: string) => { 
     if (confirm('Deseja realmente excluir este processo?')) { 
       try {
@@ -217,10 +196,8 @@ const App: React.FC = () => {
       }
     } 
   };
-
   return (
     <div className="flex h-screen bg-zinc-50 overflow-hidden font-sans text-zinc-900">
-      {/* ... [Modal de Listas Dinâmicas] ... */}
       {showModal && modalType && (
         <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
           <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -246,11 +223,9 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* ... [Modal de Gestão Operacional] ... */}
       {managingTender && (
         <div className="fixed inset-0 bg-zinc-900/80 backdrop-blur-md flex items-center justify-center z-[130] p-6 overflow-y-auto">
            <div className="bg-white rounded-[48px] shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col overflow-hidden animate-in zoom-in duration-300">
-            {/* Header */}
             <div className="p-8 border-b border-zinc-100 bg-zinc-50 flex items-center justify-between">
               <div className="flex items-center gap-5">
                 <div className="w-16 h-16 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-violet-200"><Edit3 className="w-8 h-8" /></div>
@@ -260,9 +235,7 @@ const App: React.FC = () => {
                   <button onClick={() => setManagingTender(null)} className="p-4 hover:bg-zinc-200 rounded-full transition-all"><X className="w-6 h-6 text-zinc-500" /></button>
               </div>
             </div>
-            {/* Body */}
             <div className="flex-1 overflow-y-auto p-10 space-y-12 bg-white">
-               {/* Status */}
                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <h4 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-3"><FileText className="w-4 h-4" /> Status & Fluxo</h4>
@@ -280,7 +253,6 @@ const App: React.FC = () => {
                   </div>
                </div>
                
-               {/* Intenção de Recurso */}
                {managingTender.faseAtual === 'Intenção de Recurso' && (
                 <div className="bg-orange-50 rounded-[40px] p-8 border border-orange-200 shadow-sm space-y-6 animate-in slide-in-from-top-4 duration-300">
                   <h4 className="text-lg font-black text-orange-800 flex items-center gap-3"><Scale className="w-6 h-6 text-orange-600" /> Gestão de Intenção de Recurso</h4>
@@ -298,7 +270,6 @@ const App: React.FC = () => {
                 </div>
                )}
 
-               {/* Financeiro */}
                <div className="bg-emerald-50/50 rounded-[40px] p-8 border border-emerald-100 space-y-6">
                   <div className="flex items-center justify-between"><h4 className="text-lg font-black text-zinc-900 flex items-center gap-3"><DollarSign className="w-5 h-5 text-emerald-600" /> Controle Financeiro</h4><span className="bg-white px-3 py-1 rounded-lg text-[10px] font-black uppercase text-emerald-600 border border-emerald-100">Edição Rápida</span></div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -308,7 +279,6 @@ const App: React.FC = () => {
                   </div>
                </div>
 
-               {/* Retorno */}
                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 pt-6">
                   <div className="lg:col-span-4 space-y-6">
                     <h4 className="text-lg font-black text-zinc-900 flex items-center gap-3"><CalendarClock className="w-5 h-5 text-amber-500" /> Próximo Evento (Retorno)</h4>
@@ -324,7 +294,6 @@ const App: React.FC = () => {
                   </div>
                </div>
             </div>
-            {/* Footer */}
             <div className="p-10 border-t border-zinc-100 bg-zinc-50 flex justify-between items-center">
               <button onClick={() => deleteTender(managingTender.id)} className="px-6 py-4 text-rose-500 font-black uppercase tracking-widest text-[10px] hover:bg-rose-50 rounded-2xl">Excluir</button>
               <div className="flex gap-4">
@@ -336,7 +305,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Sidebar de Menu */}
       <aside className="w-80 bg-white border-r border-zinc-200 flex flex-col z-50">
         <div className="p-10">
           <div className="flex items-center gap-4">
@@ -364,20 +332,15 @@ const App: React.FC = () => {
           <div className="max-w-7xl mx-auto space-y-10">
             {showSuccess && <div className="bg-emerald-500 p-5 rounded-3xl flex items-center gap-4 shadow-xl shadow-emerald-100 animate-in slide-in-from-top duration-300"><CheckCircle className="w-6 h-6 text-white" /><div><p className="text-white font-black uppercase text-xs">Sucesso!</p><p className="text-emerald-100 text-sm font-bold">Processo salvo com sucesso.</p></div></div>}
 
-            {/* LOADING STATE */}
             {loading && (
               <div className="text-center py-10">
                 <p className="font-bold text-zinc-500 animate-pulse">Carregando dados da nuvem...</p>
               </div>
             )}
 
-            {/* PAINEL DE ACOMPANHAMENTO (Dashboard + Lista) */}
             {!loading && (activeMenu === 'dashboard' || activeMenu === 'acompanhamento-licitacoes') && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in duration-500">
-                
-                {/* Coluna Principal (Esquerda - 8 colunas) */}
                 <div className="lg:col-span-8 space-y-8">
-                  {/* Cards de Estatísticas */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {stats.map((stat, idx) => (
                       <div key={idx} className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm transition-all hover:shadow-md">
@@ -390,10 +353,8 @@ const App: React.FC = () => {
                     ))}
                   </div>
 
-                  {/* Calendário Visual */}
                   <Dashboard tenders={tenders} onEdit={handleEditProposal} currentDate={currentDate} setCurrentDate={setCurrentDate} />
                   
-                  {/* Lista por Empresa (Fixa abaixo do Calendário) */}
                   <div className="space-y-12">
                     {Array.from(new Set(tenders.map(t => t.empresa))).map((company) => {
                       const companyTenders = tenders.filter(t => t.empresa === company);
@@ -422,7 +383,6 @@ const App: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Coluna Lateral (Direita - 4 colunas) - AGENDA FIXA */}
                 <div className="lg:col-span-4">
                   <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm p-8 h-full sticky top-8">
                     <h3 className="font-black text-slate-900 mb-6 flex items-center gap-2"><Clock className="w-5 h-5 text-indigo-600" /> Agenda Operacional</h3>
@@ -462,8 +422,6 @@ const App: React.FC = () => {
 
             {activeMenu === 'cadastro-propostas' && (
               <div className="space-y-8 animate-in fade-in duration-300">
-                 {/* ... Conteúdo do Cadastro (Mantido da versão anterior) ... */}
-                 {/* Para simplificar, vou manter a estrutura, use o código da resposta anterior se precisar ajustar os campos novamente */}
                  <div className="flex gap-2 bg-white p-2 rounded-[28px] border border-zinc-200 shadow-sm">
                    {[{ id: 1, icon: Building, label: 'Empresa & Órgão' }, { id: 2, icon: Clock, label: 'Prazos' }, { id: 3, icon: DollarSign, label: 'Financeiro' }].map(tab => (
                      <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-[22px] transition-all font-black text-[10px] uppercase tracking-widest ${activeTab === tab.id ? 'bg-violet-600 text-white shadow-xl shadow-violet-100' : 'text-zinc-400 hover:bg-zinc-50'}`}><tab.icon className="w-4 h-4" />{tab.label}</button>
