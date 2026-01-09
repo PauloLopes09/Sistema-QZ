@@ -180,7 +180,6 @@ const App: React.FC = () => {
     setManagingTender({ ...managingTender, lotes: [...managingTender.lotes, newLot] });
   };
 
-  // Lógica Calendário
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -202,7 +201,6 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-zinc-50 overflow-hidden font-sans text-zinc-900">
-      {/* ... [Modais omitidos para brevidade] ... */}
       {showModal && modalType && (
         <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
           <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -230,7 +228,142 @@ const App: React.FC = () => {
 
       {managingTender && (
         <div className="fixed inset-0 bg-zinc-900/80 backdrop-blur-md flex items-center justify-center z-[130] p-6 overflow-y-auto">
-          {/* Modal de Gestão */}
+          <div className="bg-white rounded-[48px] shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col overflow-hidden animate-in zoom-in duration-300">
+            <div className="p-8 border-b border-zinc-100 bg-zinc-50 flex items-center justify-between">
+              <div className="flex items-center gap-5">
+                <div className="w-16 h-16 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-3xl flex items-center justify-center text-white shadow-xl shadow-violet-200"><Edit3 className="w-8 h-8" /></div>
+                <div>
+                  <h3 className="text-2xl font-black text-zinc-900 leading-tight">Painel de Acompanhamento</h3>
+                  <p className="text-sm font-bold text-violet-600 uppercase tracking-widest flex items-center gap-2">{managingTender.numeroEdital} <span className="w-1.5 h-1.5 rounded-full bg-zinc-300" /> {managingTender.empresa}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                  {(managingTender.statusAtual === TenderStatus.EM_DISPUTA || managingTender.statusAtual === TenderStatus.TRIAGEM || managingTender.statusAtual === TenderStatus.AGUARDANDO_DISPUTA) && (
+                    <button onClick={() => handleFinalizeDispute(managingTender)} className="flex items-center gap-2 px-6 py-3 bg-emerald-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-emerald-100 hover:bg-emerald-600 transition-all hover:scale-105"><Award className="w-5 h-5" /> Concluir Disputa</button>
+                  )}
+                  <button onClick={() => setManagingTender(null)} className="p-4 hover:bg-zinc-200 rounded-full transition-all"><X className="w-6 h-6 text-zinc-500" /></button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-10 space-y-12 bg-white">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <h4 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] flex items-center gap-3"><FileText className="w-4 h-4" /> Status & Fluxo</h4>
+                  <div className="grid grid-cols-1 gap-6">
+                    <DynamicSelect label="Status Atual" value={managingTender.statusAtual} onChange={(v) => setManagingTender({...managingTender, statusAtual: v as TenderStatus})} options={listas.statusAtual} listType="statusAtual" onAddClick={openModal} />
+                    <DynamicSelect label="Fase do Processo" value={managingTender.faseAtual} onChange={(v) => setManagingTender({...managingTender, faseAtual: v})} options={listas.fasesProcesso} listType="fasesProcesso" onAddClick={openModal} />
+                  </div>
+                </div>
+                
+                <div className="bg-violet-50 rounded-[40px] p-8 border border-violet-100 space-y-6">
+                  <h4 className="text-lg font-black text-zinc-900 flex items-center gap-3"><Award className="w-5 h-5 text-violet-600" /> Resultado da Disputa</h4>
+                  <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Informar colocação para fins de histórico e recurso</p>
+                  <select value={managingTender.posicaoAtual} onChange={(e) => setManagingTender({...managingTender, posicaoAtual: e.target.value})} className="w-full px-6 py-4 bg-white border border-zinc-200 rounded-2xl font-black text-zinc-800 shadow-sm outline-none focus:ring-4 focus:ring-violet-100 transition-all">
+                    <option value="N/A">Definir Colocação...</option>
+                    {listas.posicoes.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* SEÇÃO FINANCEIRA DE EDIÇÃO RÁPIDA */}
+              <div className="bg-emerald-50/50 rounded-[40px] p-8 border border-emerald-100 space-y-6">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-lg font-black text-zinc-900 flex items-center gap-3">
+                    <DollarSign className="w-5 h-5 text-emerald-600" /> Controle Financeiro
+                  </h4>
+                  <span className="bg-white px-3 py-1 rounded-lg text-[10px] font-black uppercase text-emerald-600 border border-emerald-100">Edição Rápida</span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-zinc-400 uppercase">Valor Referência</label>
+                    <input 
+                      type="number" 
+                      value={managingTender.valorReferencia} 
+                      onChange={(e) => setManagingTender({...managingTender, valorReferencia: parseFloat(e.target.value)})}
+                      className="w-full px-4 py-3 bg-white border border-zinc-200 rounded-xl font-bold text-zinc-500"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2 bg-white p-4 rounded-2xl border border-emerald-100 shadow-sm grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-zinc-400 uppercase">Tipo de Limite</label>
+                      <select 
+                        value={managingTender.tipoLicitacao || 'Valor'}
+                        onChange={(e) => setManagingTender({...managingTender, tipoLicitacao: e.target.value as 'Valor' | 'Desconto'})}
+                        className="w-full px-3 py-2 bg-zinc-50 border border-zinc-200 rounded-lg font-bold text-sm"
+                      >
+                        <option value="Valor">Valor (R$)</option>
+                        <option value="Desconto">Desconto (%)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-zinc-400 uppercase">
+                        {managingTender.tipoLicitacao === 'Valor' ? 'Mínimo (R$)' : 'Desconto Máx (%)'}
+                      </label>
+                      <input 
+                        type="number" 
+                        value={managingTender.tipoLicitacao === 'Valor' ? managingTender.valorMinimo : managingTender.percentualDesconto}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (managingTender.tipoLicitacao === 'Valor') {
+                            setManagingTender({...managingTender, valorMinimo: val});
+                          } else {
+                            setManagingTender({...managingTender, percentualDesconto: val});
+                          }
+                        }}
+                        className="w-full px-3 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg font-black text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-zinc-50 rounded-[40px] p-8 border border-zinc-100 space-y-8">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-lg font-black text-zinc-900">Mapa de Lotes</h4>
+                  <div className="flex p-1.5 bg-white border border-zinc-200 rounded-2xl shadow-sm">
+                    <button onClick={() => setManagingTender({...managingTender, tipoLote: 'Unico'})} className={`px-6 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${managingTender.tipoLote === 'Unico' ? 'bg-violet-600 text-white' : 'text-zinc-400'}`}>Lote Único</button>
+                    <button onClick={() => setManagingTender({...managingTender, tipoLote: 'Multiplos'})} className={`px-6 py-2 text-[10px] font-black uppercase rounded-xl transition-all ${managingTender.tipoLote === 'Multiplos' ? 'bg-violet-600 text-white' : 'text-zinc-400'}`}>Múltiplos</button>
+                  </div>
+                </div>
+                {managingTender.tipoLote === 'Multiplos' && (
+                  <div className="space-y-4">
+                    {managingTender.lotes.map((lot) => (
+                      <div key={lot.id} className="grid grid-cols-12 gap-6 items-center bg-white p-5 rounded-[24px] border border-zinc-200">
+                        <div className="col-span-3"><input type="text" value={lot.numero} onChange={(e) => updateLot(lot.id, 'numero', e.target.value)} className="w-full px-5 py-3 bg-zinc-50 border border-zinc-200 rounded-xl font-black" /></div>
+                        <div className="col-span-7"><select value={lot.colocacao} onChange={(e) => updateLot(lot.id, 'colocacao', e.target.value)} className="w-full px-5 py-3 bg-zinc-50 border border-zinc-200 rounded-xl font-black">{listas.posicoes.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+                        <div className="col-span-2 text-right"><button onClick={() => removeLot(lot.id)} className="p-3 text-rose-400 hover:bg-rose-50 rounded-2xl"><Trash2 className="w-5 h-5" /></button></div>
+                      </div>
+                    ))}
+                    <button onClick={addLotToManaging} className="w-full py-5 border-2 border-dashed border-zinc-300 rounded-[24px] text-zinc-400 hover:text-violet-600 hover:border-violet-300 transition-all flex items-center justify-center gap-3 text-xs font-black uppercase tracking-widest"><Plus className="w-5 h-5" /> Adicionar Lote</button>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 pt-6">
+                <div className="lg:col-span-4 space-y-6">
+                  <h4 className="text-lg font-black text-zinc-900 flex items-center gap-3"><CalendarClock className="w-5 h-5 text-amber-500" /> Próximo Evento (Retorno)</h4>
+                  <div className="space-y-4">
+                    <input type="date" value={managingTender.dataRetorno || ''} onChange={(e) => setManagingTender({...managingTender, dataRetorno: e.target.value})} className="w-full px-5 py-4 bg-white border border-zinc-300 rounded-2xl font-bold" />
+                    <input type="time" value={managingTender.horarioRetorno || ''} onChange={(e) => setManagingTender({...managingTender, horarioRetorno: e.target.value})} className="w-full px-5 py-4 bg-white border border-zinc-300 rounded-2xl font-bold" />
+                  </div>
+                </div>
+                <div className="lg:col-span-8 space-y-6">
+                  <h4 className="text-lg font-black text-zinc-900 flex items-center gap-3"><MessageSquare className="w-5 h-5 text-emerald-500" /> Observações do Pregão / Chat</h4>
+                  <textarea rows={6} value={managingTender.observacoesPregao || ''} onChange={(e) => setManagingTender({...managingTender, observacoesPregao: e.target.value})} className="w-full px-8 py-6 bg-emerald-50/20 border border-emerald-100 rounded-[40px] resize-none font-medium text-zinc-800 focus:ring-4 focus:ring-emerald-50 outline-none transition-all" placeholder="Histórico do chat, negociações, intenções de recurso..." />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-10 border-t border-zinc-100 bg-zinc-50 flex justify-between items-center">
+              <button onClick={() => deleteTender(managingTender.id)} className="px-6 py-4 text-rose-500 font-black uppercase tracking-widest text-[10px] hover:bg-rose-50 rounded-2xl">Excluir Processo</button>
+              <div className="flex gap-4">
+                <button onClick={() => setManagingTender(null)} className="px-8 py-4 text-zinc-500 font-black uppercase text-[10px] tracking-widest hover:bg-zinc-200 rounded-2xl transition-all">Cancelar</button>
+                <button onClick={handleUpdateTender} className="px-14 py-4 bg-violet-600 text-white font-black uppercase text-[10px] tracking-widest rounded-2xl shadow-2xl shadow-violet-200 hover:bg-violet-700 hover:scale-[1.02] transition-all flex items-center gap-3"><Save className="w-5 h-5" /> Salvar Alterações</button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -254,11 +387,17 @@ const App: React.FC = () => {
       <main className="flex-1 flex flex-col h-full relative overflow-hidden">
         <header className="h-24 bg-white/80 backdrop-blur-md border-b border-zinc-200 px-10 flex items-center justify-between z-40">
           <div><h2 className="text-2xl font-black text-zinc-900 uppercase tracking-tighter">{activeMenu.replace('-', ' ')}</h2></div>
+          <div className="flex items-center gap-6">
+            <div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" /><input placeholder="Pesquisar..." className="bg-zinc-100 border-none rounded-2xl pl-12 pr-6 py-3.5 text-sm w-80 font-bold focus:ring-2 focus:ring-violet-500 outline-none transition-all" /></div>
+            <button className="p-3.5 bg-zinc-100 text-zinc-600 rounded-2xl relative hover:bg-zinc-200 transition-colors"><Bell className="w-6 h-6" /><span className="absolute top-3 right-3 w-3 h-3 bg-red-500 border-2 border-white rounded-full"></span></button>
+          </div>
         </header>
 
         <div className="flex-1 overflow-y-auto p-10 scrollbar-thin scrollbar-thumb-zinc-300">
           <div className="max-w-7xl mx-auto space-y-10">
-            {activeMenu === 'dashboard' && <Dashboard tenders={tenders} />}
+            {showSuccess && <div className="bg-emerald-500 p-5 rounded-3xl flex items-center gap-4 shadow-xl shadow-emerald-100 animate-in slide-in-from-top duration-300"><CheckCircle className="w-6 h-6 text-white" /><div><p className="text-white font-black uppercase text-xs">Sucesso!</p><p className="text-emerald-100 text-sm font-bold">Processo registrado no acompanhamento.</p></div></div>}
+
+            {activeMenu === 'dashboard' && <Dashboard tenders={tenders} onEdit={setManagingTender} />}
 
             {activeMenu === 'cadastro-propostas' && (
               <div className="space-y-8 animate-in fade-in duration-300">
@@ -267,7 +406,6 @@ const App: React.FC = () => {
                     <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-[22px] transition-all font-black text-[10px] uppercase tracking-widest ${activeTab === tab.id ? 'bg-violet-600 text-white shadow-xl shadow-violet-100' : 'text-zinc-400 hover:bg-zinc-50'}`}><tab.icon className="w-4 h-4" />{tab.label}</button>
                   ))}
                 </div>
-                
                 <div className="bg-white rounded-[48px] border border-zinc-200 p-12 space-y-10 min-h-[500px] shadow-sm">
                   {activeTab === 1 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10 animate-in fade-in">
@@ -284,7 +422,6 @@ const App: React.FC = () => {
                       <div className="flex flex-col"><label className="block text-sm font-black text-zinc-700 mb-3 uppercase">Data da Abertura</label><input type="date" value={formData.dataAbertura} onChange={(e) => handleInputChange('dataAbertura', e.target.value)} className="px-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl font-bold focus:ring-4 focus:ring-violet-50 outline-none" /></div>
                       <div className="flex flex-col"><label className="block text-sm font-black text-zinc-700 mb-3 uppercase">Hora da Sessão</label><input type="time" value={formData.horarioSessao} onChange={(e) => handleInputChange('horarioSessao', e.target.value)} className="px-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl font-bold focus:ring-4 focus:ring-violet-50 outline-none" /></div>
                       
-                      {/* NOVOS CAMPOS ADICIONADOS AQUI PARA APARECEREM NA TELA */}
                       <div className="flex flex-col"><label className="block text-sm font-black text-zinc-700 mb-3 uppercase">Prazo para Esclarecimento</label><input type="date" value={formData.prazoEsclarecimento} onChange={(e) => handleInputChange('prazoEsclarecimento', e.target.value)} className="px-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl font-bold focus:ring-4 focus:ring-violet-50 outline-none" /></div>
                       <div className="flex flex-col"><label className="block text-sm font-black text-zinc-700 mb-3 uppercase">Prazo para Impugnação</label><input type="date" value={formData.prazoImpugnacao} onChange={(e) => handleInputChange('prazoImpugnacao', e.target.value)} className="px-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl font-bold focus:ring-4 focus:ring-violet-50 outline-none" /></div>
                       
@@ -295,8 +432,57 @@ const App: React.FC = () => {
 
                   {activeTab === 3 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10 animate-in fade-in">
-                      <div className="flex flex-col"><label className="block text-sm font-black text-zinc-700 mb-3 uppercase">Valor Referência (R$)</label><input type="number" value={formData.valorReferencia} onChange={(e) => handleInputChange('valorReferencia', parseFloat(e.target.value))} className="px-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl font-bold focus:ring-4 focus:ring-violet-50 outline-none" /></div>
-                      <div className="flex items-center gap-5 bg-zinc-50 p-6 rounded-2xl border border-zinc-200 mt-8 shadow-sm">
+                      <div className="flex flex-col">
+                        <label className="block text-sm font-black text-zinc-700 mb-3 uppercase">Valor Referência (R$)</label>
+                        <input type="number" value={formData.valorReferencia} onChange={(e) => handleInputChange('valorReferencia', parseFloat(e.target.value))} className="px-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl font-bold focus:ring-4 focus:ring-violet-50 outline-none" />
+                      </div>
+
+                      <div className="bg-zinc-50 p-6 rounded-[32px] border border-zinc-200 md:col-span-2 space-y-6">
+                        <h4 className="text-sm font-black text-zinc-900 uppercase flex items-center gap-2">
+                          <DollarSign className="w-4 h-4 text-emerald-600" /> Valor Mínimo do Cliente
+                        </h4>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="flex flex-col">
+                            <label className="block text-[10px] font-black text-zinc-500 uppercase mb-2">Tipo de Limite</label>
+                            <div className="flex bg-white p-1 rounded-xl border border-zinc-200">
+                              <button 
+                                onClick={() => handleInputChange('tipoLicitacao', 'Valor')}
+                                className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${formData.tipoLicitacao === 'Valor' ? 'bg-zinc-900 text-white shadow-lg' : 'text-zinc-400 hover:bg-zinc-50'}`}
+                              >
+                                Valor Fixo (R$)
+                              </button>
+                              <button 
+                                onClick={() => handleInputChange('tipoLicitacao', 'Desconto')}
+                                className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${formData.tipoLicitacao === 'Desconto' ? 'bg-zinc-900 text-white shadow-lg' : 'text-zinc-400 hover:bg-zinc-50'}`}
+                              >
+                                Desconto (%)
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col">
+                            <label className="block text-[10px] font-black text-zinc-500 uppercase mb-2">
+                              {formData.tipoLicitacao === 'Valor' ? 'Valor Mínimo Aceitável (R$)' : 'Percentual Máximo de Desconto (%)'}
+                            </label>
+                            <input 
+                              type="number" 
+                              value={formData.tipoLicitacao === 'Valor' ? formData.valorMinimo : formData.percentualDesconto} 
+                              onChange={(e) => {
+                                if (formData.tipoLicitacao === 'Valor') {
+                                  handleInputChange('valorMinimo', parseFloat(e.target.value));
+                                } else {
+                                  handleInputChange('percentualDesconto', parseFloat(e.target.value));
+                                }
+                              }}
+                              className="px-5 py-2.5 bg-white border border-zinc-200 rounded-xl font-black text-zinc-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                              placeholder={formData.tipoLicitacao === 'Valor' ? "0,00" : "0%"}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-5 bg-zinc-50 p-6 rounded-2xl border border-zinc-200 mt-2 shadow-sm md:col-span-2">
                         <input type="checkbox" checked={formData.propostaEnviada} onChange={(e) => handleInputChange('propostaEnviada', e.target.checked)} className="w-6 h-6 rounded-lg text-violet-600 focus:ring-violet-500" />
                         <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest">Proposta já Enviada ao Portal?</label>
                       </div>
