@@ -54,11 +54,9 @@ const App: React.FC = () => {
     localStorage.setItem('qa_lists', JSON.stringify(listas));
   }, [listas]);
 
-  // --- FUNÇÕES DE FORMATAÇÃO DE MOEDA (R$ 1.000,00) ---
+  // FUNÇÕES DE FORMATAÇÃO DE MOEDA (R$ 1.000,00)
   const handleCurrencyInput = (field: string, value: string) => {
-    // Remove tudo que não é dígito
     const onlyDigits = value.replace(/\D/g, "");
-    // Divide por 100 para ter os centavos
     const numberValue = Number(onlyDigits) / 100;
     handleInputChange(field, numberValue);
   };
@@ -67,7 +65,6 @@ const App: React.FC = () => {
     if (value === undefined || value === null) return '';
     return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
-  // ----------------------------------------------------
 
   const initialFormState = {
     empresa: '',
@@ -186,7 +183,6 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-zinc-50 overflow-hidden font-sans text-zinc-900">
-      {/* Modais */}
       {showModal && modalType && (
         <div className="fixed inset-0 bg-zinc-900/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
           <div className="bg-white rounded-[32px] shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -212,7 +208,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Modal de Gestão Operacional */}
       {managingTender && (
         <div className="fixed inset-0 bg-zinc-900/80 backdrop-blur-md flex items-center justify-center z-[130] p-6 overflow-y-auto">
           <div className="bg-white rounded-[48px] shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col overflow-hidden animate-in zoom-in duration-300">
@@ -425,7 +420,6 @@ const App: React.FC = () => {
                       <div className="flex flex-col"><label className="block text-sm font-black text-zinc-700 mb-3 uppercase">Prazo para Impugnação</label><input type="date" value={formData.prazoImpugnacao} onChange={(e) => handleInputChange('prazoImpugnacao', e.target.value)} className="px-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl font-bold focus:ring-4 focus:ring-violet-50 outline-none" /></div>
                       
                       <DynamicSelect label="Modo de Disputa" value={formData.modoDisputa || ''} onChange={(v) => handleInputChange('modoDisputa', v)} options={listas.modosDisputa} listType="modosDisputa" onAddClick={openModal} />
-                      <DynamicSelect label="Responsável" value={formData.responsavel || ''} onChange={(v) => handleInputChange('responsavel', v)} options={listas.responsaveis} listType="responsaveis" onAddClick={openModal} />
                     </div>
                   )}
 
@@ -516,11 +510,6 @@ const App: React.FC = () => {
                           </div>
                         </div>
                       )}
-
-                      <div className="flex items-center gap-5 bg-zinc-50 p-6 rounded-2xl border border-zinc-200 mt-2 shadow-sm md:col-span-2">
-                        <input type="checkbox" checked={formData.propostaEnviada} onChange={(e) => handleInputChange('propostaEnviada', e.target.checked)} className="w-6 h-6 rounded-lg text-violet-600 focus:ring-violet-500" />
-                        <label className="text-[10px] font-black uppercase text-zinc-600 tracking-widest">Proposta já Enviada ao Portal?</label>
-                      </div>
                     </div>
                   )}
 
