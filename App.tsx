@@ -53,7 +53,8 @@ const App: React.FC = () => {
     localStorage.setItem('qa_lists', JSON.stringify(listas));
   }, [listas]);
 
-  const [formData, setFormData] = useState<Partial<Tender>>({
+  // Adicionei 'recebeuValores' ao estado do formulário para controlar a visualização
+  const [formData, setFormData] = useState<Partial<Tender> & { recebeuValores: boolean }>({
     empresa: '',
     orgaoLicitante: '',
     numeroEdital: '',
@@ -81,9 +82,10 @@ const App: React.FC = () => {
     tipoLote: 'Unico',
     lotes: [],
     observacoes: '',
+    recebeuValores: false, // Novo campo para controlar a lógica
   });
 
-  const handleInputChange = (field: keyof Tender, value: any) => {
+  const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -257,7 +259,6 @@ const App: React.FC = () => {
                 
                 <div className="bg-violet-50 rounded-[40px] p-8 border border-violet-100 space-y-6">
                   <h4 className="text-lg font-black text-zinc-900 flex items-center gap-3"><Award className="w-5 h-5 text-violet-600" /> Resultado da Disputa</h4>
-                  <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Informar colocação para fins de histórico e recurso</p>
                   <select value={managingTender.posicaoAtual} onChange={(e) => setManagingTender({...managingTender, posicaoAtual: e.target.value})} className="w-full px-6 py-4 bg-white border border-zinc-200 rounded-2xl font-black text-zinc-800 shadow-sm outline-none focus:ring-4 focus:ring-violet-100 transition-all">
                     <option value="N/A">Definir Colocação...</option>
                     {listas.posicoes.map(p => <option key={p} value={p}>{p}</option>)}
@@ -265,7 +266,7 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* SEÇÃO FINANCEIRA DE EDIÇÃO RÁPIDA */}
+              {/* SEÇÃO FINANCEIRA DE EDIÇÃO RÁPIDA NO MODAL */}
               <div className="bg-emerald-50/50 rounded-[40px] p-8 border border-emerald-100 space-y-6">
                 <div className="flex items-center justify-between">
                   <h4 className="text-lg font-black text-zinc-900 flex items-center gap-3">
@@ -437,50 +438,66 @@ const App: React.FC = () => {
                         <input type="number" value={formData.valorReferencia} onChange={(e) => handleInputChange('valorReferencia', parseFloat(e.target.value))} className="px-5 py-3.5 bg-zinc-50 border border-zinc-200 rounded-2xl font-bold focus:ring-4 focus:ring-violet-50 outline-none" />
                       </div>
 
-                      <div className="bg-zinc-50 p-6 rounded-[32px] border border-zinc-200 md:col-span-2 space-y-6">
-                        <h4 className="text-sm font-black text-zinc-900 uppercase flex items-center gap-2">
-                          <DollarSign className="w-4 h-4 text-emerald-600" /> Valor Mínimo do Cliente
-                        </h4>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="flex flex-col">
-                            <label className="block text-[10px] font-black text-zinc-500 uppercase mb-2">Tipo de Limite</label>
-                            <div className="flex bg-white p-1 rounded-xl border border-zinc-200">
-                              <button 
-                                onClick={() => handleInputChange('tipoLicitacao', 'Valor')}
-                                className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${formData.tipoLicitacao === 'Valor' ? 'bg-zinc-900 text-white shadow-lg' : 'text-zinc-400 hover:bg-zinc-50'}`}
-                              >
-                                Valor Fixo (R$)
-                              </button>
-                              <button 
-                                onClick={() => handleInputChange('tipoLicitacao', 'Desconto')}
-                                className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${formData.tipoLicitacao === 'Desconto' ? 'bg-zinc-900 text-white shadow-lg' : 'text-zinc-400 hover:bg-zinc-50'}`}
-                              >
-                                Desconto (%)
-                              </button>
+                      {/* CHECKBOX: A EMPRESA ENVIOU VALORES? */}
+                      <div className="md:col-span-2 flex items-center gap-4 bg-zinc-50 p-4 rounded-2xl border border-zinc-200">
+                        <input 
+                          type="checkbox" 
+                          checked={formData.recebeuValores} 
+                          onChange={(e) => handleInputChange('recebeuValores', e.target.checked)} 
+                          className="w-6 h-6 rounded-lg text-emerald-600 focus:ring-emerald-500"
+                        />
+                        <label className="text-sm font-black text-zinc-700 uppercase">
+                          A empresa enviou os valores mínimos?
+                        </label>
+                      </div>
+
+                      {/* CAMPOS CONDICIONAIS: SÓ APARECEM SE A EMPRESA MANDOU OS VALORES */}
+                      {formData.recebeuValores && (
+                        <div className="bg-zinc-50 p-6 rounded-[32px] border border-zinc-200 md:col-span-2 space-y-6 animate-in slide-in-from-top-4 duration-300">
+                          <h4 className="text-sm font-black text-zinc-900 uppercase flex items-center gap-2">
+                            <DollarSign className="w-4 h-4 text-emerald-600" /> Valor Mínimo do Cliente
+                          </h4>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="flex flex-col">
+                              <label className="block text-[10px] font-black text-zinc-500 uppercase mb-2">Tipo de Limite</label>
+                              <div className="flex bg-white p-1 rounded-xl border border-zinc-200">
+                                <button 
+                                  onClick={() => handleInputChange('tipoLicitacao', 'Valor')}
+                                  className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${formData.tipoLicitacao === 'Valor' ? 'bg-zinc-900 text-white shadow-lg' : 'text-zinc-400 hover:bg-zinc-50'}`}
+                                >
+                                  Valor Fixo (R$)
+                                </button>
+                                <button 
+                                  onClick={() => handleInputChange('tipoLicitacao', 'Desconto')}
+                                  className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${formData.tipoLicitacao === 'Desconto' ? 'bg-zinc-900 text-white shadow-lg' : 'text-zinc-400 hover:bg-zinc-50'}`}
+                                >
+                                  Desconto (%)
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col">
+                              <label className="block text-[10px] font-black text-zinc-500 uppercase mb-2">
+                                {formData.tipoLicitacao === 'Valor' ? 'Valor Mínimo Aceitável (R$)' : 'Percentual Máximo de Desconto (%)'}
+                              </label>
+                              <input 
+                                type="number" 
+                                value={formData.tipoLicitacao === 'Valor' ? formData.valorMinimo : formData.percentualDesconto} 
+                                onChange={(e) => {
+                                  if (formData.tipoLicitacao === 'Valor') {
+                                    handleInputChange('valorMinimo', parseFloat(e.target.value));
+                                  } else {
+                                    handleInputChange('percentualDesconto', parseFloat(e.target.value));
+                                  }
+                                }}
+                                className="px-5 py-2.5 bg-white border border-zinc-200 rounded-xl font-black text-zinc-900 focus:ring-2 focus:ring-emerald-500 outline-none"
+                                placeholder={formData.tipoLicitacao === 'Valor' ? "0,00" : "0%"}
+                              />
                             </div>
                           </div>
-
-                          <div className="flex flex-col">
-                            <label className="block text-[10px] font-black text-zinc-500 uppercase mb-2">
-                              {formData.tipoLicitacao === 'Valor' ? 'Valor Mínimo Aceitável (R$)' : 'Percentual Máximo de Desconto (%)'}
-                            </label>
-                            <input 
-                              type="number" 
-                              value={formData.tipoLicitacao === 'Valor' ? formData.valorMinimo : formData.percentualDesconto} 
-                              onChange={(e) => {
-                                if (formData.tipoLicitacao === 'Valor') {
-                                  handleInputChange('valorMinimo', parseFloat(e.target.value));
-                                } else {
-                                  handleInputChange('percentualDesconto', parseFloat(e.target.value));
-                                }
-                              }}
-                              className="px-5 py-2.5 bg-white border border-zinc-200 rounded-xl font-black text-zinc-900 focus:ring-2 focus:ring-emerald-500 outline-none"
-                              placeholder={formData.tipoLicitacao === 'Valor' ? "0,00" : "0%"}
-                            />
-                          </div>
                         </div>
-                      </div>
+                      )}
 
                       <div className="flex items-center gap-5 bg-zinc-50 p-6 rounded-2xl border border-zinc-200 mt-2 shadow-sm md:col-span-2">
                         <input type="checkbox" checked={formData.propostaEnviada} onChange={(e) => handleInputChange('propostaEnviada', e.target.checked)} className="w-6 h-6 rounded-lg text-violet-600 focus:ring-violet-500" />
